@@ -17,11 +17,7 @@
 
 @push('json-ld')
 <script type="application/ld+json">@json((new \App\Services\SeoService())->productJsonLd($product))</script>
-<script type="application/ld+json">@json((new \App\Services\SeoService())->breadcrumbJsonLd([
-    ['name' => 'Home', 'url' => route('home')],
-    ['name' => 'Shop', 'url' => route('shop.index')],
-    ['name' => $product->name],
-]))</script>
+<script type="application/ld+json">@json($breadcrumbJsonLd)</script>
 @endpush
 
 @section('content')

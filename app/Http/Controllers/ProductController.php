@@ -23,6 +23,13 @@ class ProductController extends Controller
             $capi->sendViewContent($product, $viewContentEventId);
         }
 
-        return view('products.show', compact('product', 'related', 'viewContentEventId'));
+        $seoService = app(\App\Services\SeoService::class);
+        $breadcrumbJsonLd = $seoService->breadcrumbJsonLd([
+            ['name' => 'Home', 'url' => route('home')],
+            ['name' => 'Shop', 'url' => route('shop.index')],
+            ['name' => $product->name],
+        ]);
+
+        return view('products.show', compact('product', 'related', 'viewContentEventId', 'breadcrumbJsonLd'));
     }
 }
