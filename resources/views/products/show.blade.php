@@ -84,7 +84,7 @@
                 <p class="mt-3 text-gray-600">{{ $product->short_description }}</p>
             @endif
 
-            <form action="{{ route('cart.add') }}" method="POST" class="mt-6 space-y-4">
+            <form id="product-cart-form" class="mt-6 space-y-4">
                 @csrf
                 <input type="hidden" name="product_id" value="{{ $product->id }}">
 
@@ -107,10 +107,10 @@
                         <input type="number" id="qty" name="quantity" value="1" min="1" max="{{ max(1, $product->stock) }}" class="w-20 rounded-lg border border-gray-300 px-3 py-2 text-center focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
                     </div>
                     <div class="flex gap-2">
-                        <button type="submit" {{ $product->stock < 1 ? 'disabled' : '' }} class="rounded-lg bg-accent px-6 py-2.5 font-medium text-white hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50">
+                        <button type="button" id="btn-add-cart" {{ $product->stock < 1 ? 'disabled' : '' }} class="rounded-lg bg-accent px-6 py-2.5 font-medium text-white hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50">
                             Add to cart
                         </button>
-                        <button type="submit" name="redirect" value="checkout" {{ $product->stock < 1 ? 'disabled' : '' }} class="rounded-lg border-2 border-accent bg-transparent px-6 py-2.5 font-medium text-accent hover:bg-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50">
+                        <button type="button" id="btn-buy-now" {{ $product->stock < 1 ? 'disabled' : '' }} class="rounded-lg border-2 border-accent bg-transparent px-6 py-2.5 font-medium text-accent hover:bg-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50">
                             Buy now
                         </button>
                     </div>
@@ -199,6 +199,69 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+@push('scripts')
+<script>
+(function() {
+    var addUrl = @json(route('cart.add'));
+    var checkoutUrl = @json(route('checkout.index'));
+    $(function() {
+        $('#btn-add-cart').on('click', function() {
+            var btn = $(this);
+            if (btn.prop('disabled')) return;
+            var form = $('#product-cart-form');
+            var data = form.serialize();
+            btn.prop('disabled', true).addClass('opacity-75');
+            $.ajax({
+                url: addUrl,
+                method: 'POST',
+                data: data,
+                dataType: 'json'
+            }).done(function(res) {
+                if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
+                if (typeof showToast === 'function') showToast(res.message || 'Added to cart.', 'success');
+            }).fail(function(xhr) {
+                var msg = 'Could not add to cart.';
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    var first = Object.values(xhr.responseJSON.errors)[0];
+                    if (Array.isArray(first)) msg = first[0];
+                } else if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                if (typeof showToast === 'function') showToast(msg, 'error');
+            }).always(function() {
+                btn.prop('disabled', false).removeClass('opacity-75');
+            });
+        });
+        $('#btn-buy-now').on('click', function() {
+            var btn = $(this);
+            if (btn.prop('disabled')) return;
+            var form = $('#product-cart-form');
+            var data = form.serialize() + '&redirect=checkout';
+            btn.prop('disabled', true).addClass('opacity-75');
+            $.ajax({
+                url: addUrl,
+                method: 'POST',
+                data: data,
+                dataType: 'json'
+            }).done(function(res) {
+                if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
+                if (res.redirect) {
+                    window.location.href = res.redirect;
+                    return;
+                }
+                window.location.href = checkoutUrl;
+            }).fail(function(xhr) {
+                var msg = 'Could not add to cart.';
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    var first = Object.values(xhr.responseJSON.errors)[0];
+                    if (Array.isArray(first)) msg = first[0];
+                } else if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                if (typeof showToast === 'function') showToast(msg, 'error');
+                btn.prop('disabled', false).removeClass('opacity-75');
+            });
+        });
+    });
+})();
+</script>
+@endpush
 @endsection
 
 @if(isset($viewContentEventId) && $metaPixelId = \App\Models\Setting::get('meta_pixel_id', config('meta.pixel_id')))

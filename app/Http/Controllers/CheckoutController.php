@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -43,14 +44,17 @@ class CheckoutController extends Controller
         return view('checkout.index', compact('cartItems', 'subtotal', 'shipping', 'tax', 'total', 'initiateEventId'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $cart = session('cart', []);
         if (empty($cart)) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => 'Your cart is empty.'], 422);
+            }
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
 
-        $validated = $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'name' => 'required|string|min:2|max:255',
             'phone' => ['required', 'string', 'regex:/^01[3-9]\d{8}$/'],
             'city' => 'required|string|max:255',
@@ -58,7 +62,22 @@ class CheckoutController extends Controller
             'email' => 'nullable|email',
         ]);
 
+        if ($validator->fails()) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $validated = $validator->validated();
         session(['checkout_customer' => $validated]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'redirect' => route('checkout.confirm'),
+            ]);
+        }
 
         return redirect()->route('checkout.confirm')->with('success', 'Please review your order.');
     }

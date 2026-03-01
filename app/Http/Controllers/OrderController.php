@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -12,15 +13,21 @@ use Illuminate\View\View;
 
 class OrderController extends Controller
 {
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $cart = session('cart', []);
         $customer = session('checkout_customer');
 
         if (empty($cart)) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => 'Your cart is empty.'], 422);
+            }
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
         if (empty($customer)) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => 'Please enter your details first.'], 422);
+            }
             return redirect()->route('checkout.index')->with('error', 'Please enter your details first.');
         }
 
@@ -91,6 +98,13 @@ class OrderController extends Controller
         $capi = app(\App\Services\MetaConversionsApiService::class);
         if ($capi->isConfigured()) {
             $capi->sendPurchase($order, $purchaseEventId);
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'redirect' => route('orders.success'),
+            ]);
         }
 
         return redirect()->route('orders.success')->with('success', 'Order placed successfully.');

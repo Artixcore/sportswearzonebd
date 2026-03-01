@@ -82,13 +82,43 @@
                 <p class="mt-4 rounded-lg bg-muted px-3 py-2 text-sm text-gray-700">
                     <strong>Payment:</strong> Cash on Delivery
                 </p>
-                <form action="{{ route('orders.store') }}" method="POST" class="mt-6">
+                <form id="confirm-order-form" action="{{ route('orders.store') }}" method="POST" class="mt-6">
                     @csrf
-                    <button type="submit" class="w-full rounded-lg bg-accent py-3 font-medium text-white hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">Confirm Order</button>
+                    <button type="submit" id="confirm-order-btn" class="w-full rounded-lg bg-accent py-3 font-medium text-white hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">Confirm Order</button>
                 </form>
                 <a href="{{ route('cart.index') }}" class="mt-3 block w-full rounded-lg border-2 border-gray-300 py-3 text-center font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">Back to Cart</a>
             </div>
         </div>
     </div>
 </div>
+@push('scripts')
+<script>
+$(function() {
+    $('#confirm-order-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var btn = $('#confirm-order-btn');
+        btn.prop('disabled', true).addClass('opacity-75');
+        $.ajax({
+            url: form.attr('action'),
+            method: 'POST',
+            data: form.serialize(),
+            dataType: 'json'
+        }).done(function(res) {
+            if (res.status === 'success' && res.redirect) {
+                window.location.href = res.redirect;
+                return;
+            }
+            btn.prop('disabled', false).removeClass('opacity-75');
+            if (typeof showToast === 'function') showToast('Something went wrong.', 'error');
+        }).fail(function(xhr) {
+            btn.prop('disabled', false).removeClass('opacity-75');
+            var msg = 'Could not place order.';
+            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            if (typeof showToast === 'function') showToast(msg, 'error');
+        });
+    });
+});
+</script>
+@endpush
 @endsection

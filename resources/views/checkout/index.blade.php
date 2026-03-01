@@ -6,41 +6,42 @@
 <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
     <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl">Checkout</h1>
 
-    <form method="POST" action="{{ route('checkout.store') }}" class="mt-6 lg:grid lg:grid-cols-3 lg:gap-8">
+    <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" class="mt-6 lg:grid lg:grid-cols-3 lg:gap-8">
         @csrf
         <div class="lg:col-span-2">
             <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
                 <h2 class="text-lg font-semibold text-gray-900">Customer details</h2>
+                <div id="checkout-errors-summary" class="mt-2 hidden rounded-lg bg-red-50 p-3 text-sm text-red-700"></div>
                 <div class="mt-6 space-y-4">
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700">Full name <span class="text-red-500">*</span></label>
-                        <input type="text" id="name" name="name" value="{{ old('name', auth()->user()?->name) }}" required autocomplete="name" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent @error('name') border-red-500 @enderror">
-                        @error('name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <input type="text" id="name" name="name" value="{{ old('name', auth()->user()?->name) }}" autocomplete="name" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
+                        <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="name"></p>
                     </div>
                     <div>
                         <label for="phone" class="block text-sm font-medium text-gray-700">Phone number <span class="text-red-500">*</span></label>
-                        <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" required placeholder="01XXXXXXXXX" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent @error('phone') border-red-500 @enderror">
-                        @error('phone')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" placeholder="01XXXXXXXXX" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
+                        <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="phone"></p>
                         <p class="mt-1 text-xs text-gray-500">Bangladesh mobile: 11 digits starting with 01</p>
                     </div>
                     <div>
                         <label for="city" class="block text-sm font-medium text-gray-700">City <span class="text-red-500">*</span></label>
-                        <input type="text" id="city" name="city" value="{{ old('city') }}" required class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent @error('city') border-red-500 @enderror">
-                        @error('city')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <input type="text" id="city" name="city" value="{{ old('city') }}" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
+                        <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="city"></p>
                     </div>
                     <div>
                         <label for="address" class="block text-sm font-medium text-gray-700">Address <span class="text-red-500">*</span></label>
-                        <textarea id="address" name="address" rows="3" required class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent @error('address') border-red-500 @enderror">{{ old('address') }}</textarea>
-                        @error('address')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <textarea id="address" name="address" rows="3" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">{{ old('address') }}</textarea>
+                        <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="address"></p>
                     </div>
                     <div>
                         <label for="email" class="block text-sm font-medium text-gray-700">Email (optional, for order updates)</label>
-                        <input type="email" id="email" name="email" value="{{ old('email', auth()->user()?->email) }}" autocomplete="email" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent @error('email') border-red-500 @enderror">
-                        @error('email')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <input type="email" id="email" name="email" value="{{ old('email', auth()->user()?->email) }}" autocomplete="email" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
+                        <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="email"></p>
                     </div>
                 </div>
                 <div class="mt-8">
-                    <button type="submit" class="w-full rounded-lg bg-accent px-6 py-3 font-medium text-white hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 sm:w-auto sm:min-w-[200px]">Continue to Confirm Order</button>
+                    <button type="submit" id="checkout-submit-btn" class="w-full rounded-lg bg-accent px-6 py-3 font-medium text-white hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 sm:w-auto sm:min-w-[200px]">Continue to Confirm Order</button>
                 </div>
             </div>
         </div>
@@ -74,6 +75,47 @@
         </div>
     </form>
 </div>
+@push('scripts')
+<script>
+$(function() {
+    $('#checkout-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var btn = $('#checkout-submit-btn');
+        $('.checkout-error').text('').addClass('hidden');
+        $('#checkout-errors-summary').addClass('hidden').text('');
+        btn.prop('disabled', true).addClass('opacity-75');
+        $.ajax({
+            url: form.attr('action'),
+            method: 'POST',
+            data: form.serialize(),
+            dataType: 'json'
+        }).done(function(res) {
+            if (res.status === 'success' && res.redirect) {
+                window.location.href = res.redirect;
+                return;
+            }
+            btn.prop('disabled', false).removeClass('opacity-75');
+        }).fail(function(xhr) {
+            btn.prop('disabled', false).removeClass('opacity-75');
+            var data = xhr.responseJSON;
+            if (data && data.errors) {
+                $.each(data.errors, function(field, messages) {
+                    var el = $('.checkout-error[data-for="' + field + '"]');
+                    if (el.length && messages && messages[0]) {
+                        el.text(messages[0]).removeClass('hidden');
+                    }
+                });
+            } else if (data && data.message) {
+                $('#checkout-errors-summary').text(data.message).removeClass('hidden');
+            } else {
+                $('#checkout-errors-summary').text('Something went wrong. Please try again.').removeClass('hidden');
+            }
+        });
+    });
+});
+</script>
+@endpush
 @if(isset($initiateEventId) && ($metaPixelId = \App\Models\Setting::get('meta_pixel_id', config('meta.pixel_id'))))
 @push('scripts')
 <script>

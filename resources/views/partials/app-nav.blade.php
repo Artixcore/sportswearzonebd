@@ -40,9 +40,7 @@
             {{-- Cart --}}
             <a href="{{ route('cart.index') }}" class="relative rounded-lg p-2 text-white hover:bg-base-light focus:outline-none focus:ring-2 focus:ring-accent" aria-label="Cart">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                @if(isset($cartCount) && $cartCount > 0)
-                    <span class="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">{{ $cartCount > 99 ? '99+' : $cartCount }}</span>
-                @endif
+                <span class="nav-cart-count absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-xs font-bold text-white" style="{{ (isset($cartCount) && $cartCount > 0) ? '' : 'display:none' }}">{{ isset($cartCount) && $cartCount > 0 ? ($cartCount > 99 ? '99+' : $cartCount) : '0' }}</span>
             </a>
 
             @auth
@@ -74,9 +72,7 @@
         <div class="flex items-center gap-2 md:hidden">
             <a href="{{ route('cart.index') }}" class="relative p-2 text-white" aria-label="Cart">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                @if(isset($cartCount) && $cartCount > 0)
-                    <span class="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">{{ $cartCount > 99 ? '99+' : $cartCount }}</span>
-                @endif
+                <span class="nav-cart-count absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-xs font-bold text-white" style="{{ (isset($cartCount) && $cartCount > 0) ? '' : 'display:none' }}">{{ isset($cartCount) && $cartCount > 0 ? ($cartCount > 99 ? '99+' : $cartCount) : '0' }}</span>
             </a>
             <button type="button" id="nav-mobile-toggle" aria-label="Open menu" aria-expanded="false" class="rounded-lg p-2 text-white hover:bg-base-light focus:outline-none focus:ring-2 focus:ring-accent">
                 <svg id="nav-icon-open" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>

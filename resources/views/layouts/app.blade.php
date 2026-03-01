@@ -57,8 +57,44 @@
         @yield('content')
     </main>
 
+    <div id="toast-container" class="fixed right-4 top-20 z-[100] flex flex-col gap-2" aria-live="polite"></div>
+
     @include('partials.app-footer')
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script>
+    (function() {
+        var token = document.querySelector('meta[name="csrf-token"]');
+        if (token && typeof $ !== 'undefined') {
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': token.getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            });
+        }
+        window.updateNavCartCount = function(count) {
+            var n = parseInt(count, 10) || 0;
+            var text = n > 99 ? '99+' : String(n);
+            document.querySelectorAll('.nav-cart-count').forEach(function(el) {
+                el.textContent = text;
+                el.style.display = n > 0 ? '' : 'none';
+            });
+        };
+        window.showToast = function(message, type) {
+            type = type || 'success';
+            var container = document.getElementById('toast-container');
+            if (!container) return;
+            var el = document.createElement('div');
+            el.className = 'rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ' + (type === 'error' ? 'bg-red-600' : 'bg-accent');
+            el.textContent = message;
+            container.appendChild(el);
+            setTimeout(function() {
+                if (el.parentNode) el.parentNode.removeChild(el);
+            }, 4000);
+        };
+    })();
+    </script>
     @stack('scripts')
     @php $metaPixelId = \App\Models\Setting::get('meta_pixel_id', config('meta.pixel_id')); @endphp
     @if($metaPixelId)

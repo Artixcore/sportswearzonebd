@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -24,9 +25,20 @@ class CartController extends Controller
         return view('cart.index', compact('cartItems'));
     }
 
-    public function add(Request $request): RedirectResponse
+    public function add(Request $request): JsonResponse|RedirectResponse
     {
-        $request->validate(['product_id' => 'required|exists:products,id', 'quantity' => 'nullable|integer|min:1']);
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'product_id' => 'required|exists:products,id',
+            'quantity' => 'nullable|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
         $id = (int) $request->product_id;
         $qty = (int) ($request->quantity ?? 1);
         $cart = session('cart', []);
@@ -40,6 +52,19 @@ class CartController extends Controller
             $capi->sendAddToCart($product, $qty, $eventId);
         }
 
+        if ($request->wantsJson() || $request->ajax()) {
+            $cartCount = (int) array_sum(session('cart', []));
+            $data = [
+                'status' => 'success',
+                'message' => 'Added to cart.',
+                'cart_count' => $cartCount,
+            ];
+            if ($request->input('redirect') === 'checkout') {
+                $data['redirect'] = route('checkout.index');
+            }
+            return response()->json($data);
+        }
+
         if ($request->input('redirect') === 'checkout') {
             return redirect()->route('checkout.index')->with('success', 'Added to cart.');
         }
@@ -47,37 +72,97 @@ class CartController extends Controller
         return redirect()->back()->with('success', 'Added to cart.');
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request): JsonResponse|RedirectResponse
     {
-        $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:0',
         ]);
+
+        if ($validator->fails()) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->route('cart.index')->withErrors($validator);
+        }
+
         $cart = session('cart', []);
         $id = (int) $request->product_id;
         $qty = (int) $request->quantity;
+        $product = Product::find($id);
+        $removed = false;
+
         if ($qty <= 0) {
             unset($cart[$id]);
+            $removed = true;
         } else {
             $cart[$id] = $qty;
         }
         session(['cart' => $cart]);
 
+        $totals = $this->cartTotals(session('cart', []));
+        $itemSubtotal = 0;
+        if ($product && ! $removed) {
+            $itemSubtotal = (float) $product->price * $qty;
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'cart_total' => $totals['total'],
+                'item_subtotal' => round($itemSubtotal, 2),
+                'cart_count' => $totals['count'],
+                'removed' => $removed,
+            ]);
+        }
+
         return redirect()->route('cart.index')->with('success', 'Cart updated.');
     }
 
-    public function remove(int $productId): RedirectResponse
+    public function remove(int $productId, Request $request): JsonResponse|RedirectResponse
     {
         $cart = session('cart', []);
         unset($cart[$productId]);
         session(['cart' => $cart]);
 
+        if ($request->wantsJson() || $request->ajax()) {
+            $totals = $this->cartTotals(session('cart', []));
+            return response()->json([
+                'status' => 'success',
+                'cart_total' => $totals['total'],
+                'cart_count' => $totals['count'],
+            ]);
+        }
+
         return redirect()->route('cart.index')->with('success', 'Item removed.');
     }
 
-    public function clear(): RedirectResponse
+    public function clear(Request $request): JsonResponse|RedirectResponse
     {
         session()->forget('cart');
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['status' => 'success', 'cart_count' => 0]);
+        }
+
         return redirect()->route('cart.index')->with('success', 'Cart cleared.');
+    }
+
+    private function cartTotals(array $cart): array
+    {
+        if (empty($cart)) {
+            return ['total' => 0, 'count' => 0];
+        }
+        $products = Product::whereIn('id', array_keys($cart))->get()->keyBy('id');
+        $total = 0;
+        foreach ($cart as $id => $qty) {
+            if ($products->has($id)) {
+                $total += (float) $products[$id]->price * (int) $qty;
+            }
+        }
+        return [
+            'total' => round($total, 2),
+            'count' => (int) array_sum($cart),
+        ];
     }
 }
