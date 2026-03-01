@@ -1,0 +1,117 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\View\View;
+
+class OrderController extends Controller
+{
+    public function store(Request $request): RedirectResponse
+    {
+        $cart = session('cart', []);
+        $customer = session('checkout_customer');
+
+        if (empty($cart)) {
+            return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
+        }
+        if (empty($customer)) {
+            return redirect()->route('checkout.index')->with('error', 'Please enter your details first.');
+        }
+
+        $productIds = array_keys($cart);
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+        $subtotal = 0;
+        $items = [];
+        foreach ($cart as $id => $qty) {
+            if (! $products->has($id)) {
+                continue;
+            }
+            $p = $products[$id];
+            $qty = (int) $qty;
+            $subtotal += $p->price * $qty;
+            $items[] = [
+                'product_id' => $p->id,
+                'name' => $p->name,
+                'price' => $p->price,
+                'quantity' => $qty,
+                'sku' => $p->sku,
+            ];
+        }
+
+        $shipping = 0;
+        $tax = 0;
+        $total = $subtotal + $shipping + $tax;
+        $purchaseEventId = Str::uuid()->toString();
+
+        $order = Order::create([
+            'user_id' => auth()->id(),
+            'guest_email' => $customer['email'] ?? null,
+            'status' => 'pending',
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'shipping' => $shipping,
+            'total' => $total,
+            'currency' => 'BDT',
+            'meta' => [
+                'utm_source' => $request->get('utm_source'),
+                'utm_medium' => $request->get('utm_medium'),
+                'utm_campaign' => $request->get('utm_campaign'),
+                'event_id' => $purchaseEventId,
+            ],
+            'shipping_name' => $customer['name'],
+            'shipping_phone' => $customer['phone'],
+            'shipping_city' => $customer['city'],
+            'shipping_address' => $customer['address'],
+            'billing_name' => $customer['name'],
+            'billing_phone' => $customer['phone'],
+            'billing_address' => $customer['address'],
+        ]);
+
+        foreach ($items as $item) {
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $item['product_id'],
+                'name' => $item['name'],
+                'price' => $item['price'],
+                'quantity' => $item['quantity'],
+                'sku' => $item['sku'],
+            ]);
+        }
+
+        session()->forget('cart');
+        session()->forget('checkout_customer');
+        session()->flash('last_order_id', $order->id);
+
+        $capi = app(\App\Services\MetaConversionsApiService::class);
+        if ($capi->isConfigured()) {
+            $capi->sendPurchase($order, $purchaseEventId);
+        }
+
+        return redirect()->route('orders.success')->with('success', 'Order placed successfully.');
+    }
+
+    public function success(): View|RedirectResponse
+    {
+        $orderId = session('last_order_id');
+        if (! $orderId) {
+            return redirect()->route('shop.index')->with('info', 'No order to display.');
+        }
+
+        $order = Order::with('items')->find($orderId);
+        if (! $order) {
+            return redirect()->route('shop.index')->with('error', 'Order not found.');
+        }
+
+        if ($order->user_id && $order->user_id !== auth()->id()) {
+            return redirect()->route('home')->with('error', 'Order not found.');
+        }
+
+        return view('orders.success', compact('order'));
+    }
+}
