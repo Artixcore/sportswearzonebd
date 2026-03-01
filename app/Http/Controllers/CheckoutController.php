@@ -80,6 +80,13 @@ class CheckoutController extends Controller
             return redirect()->route('checkout.index')->with('error', 'Please enter your details first.');
         }
 
+        $allowedMethods = ['bKash', 'Nagad', 'Rocket', 'Cash'];
+        $hasAdvanceConfirmed = ! empty($customer['delivery_advance_confirmed'])
+            && in_array($customer['delivery_advance_method'] ?? null, $allowedMethods, true);
+        if (! $hasAdvanceConfirmed) {
+            return redirect()->route('checkout.index')->with('error', 'Please complete the delivery charge advance section.');
+        }
+
         $productIds = array_keys($cart);
         $products = Product::with('images')->whereIn('id', $productIds)->get()->keyBy('id');
         $cartItems = [];

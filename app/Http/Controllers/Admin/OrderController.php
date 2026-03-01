@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateOrderStatusRequest;
 use App\Models\ActivityLog;
 use App\Models\Order;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -52,14 +54,72 @@ class OrderController extends Controller
         return view('admin.orders.invoice', compact('order'));
     }
 
-    public function updateStatus(UpdateOrderStatusRequest $request, Order $order): RedirectResponse
+    public function updateDeliveryAdvance(Request $request, Order $order): JsonResponse
     {
+        $hasAdvance = $order->delivery_advance_customer_confirmed || (isset($order->delivery_advance_paid) && (float) $order->delivery_advance_paid > 0);
+        if (! $hasAdvance) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This order does not have a delivery charge advance to verify.',
+            ], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'delivery_advance_admin_txn_id' => 'required|string|min:1',
+            'delivery_advance_admin_verified' => 'sometimes|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $order->update([
+            'delivery_advance_admin_txn_id' => $request->delivery_advance_admin_txn_id,
+            'delivery_advance_admin_verified' => $request->boolean('delivery_advance_admin_verified'),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Delivery advance verification updated.',
+        ]);
+    }
+
+    public function updateStatus(UpdateOrderStatusRequest $request, Order $order): JsonResponse|RedirectResponse
+    {
+        $newStatus = $request->status;
+        $restrictedStatuses = ['confirmed', 'processing', 'shipped'];
+        $hasAdvance = $order->delivery_advance_customer_confirmed || (isset($order->delivery_advance_paid) && (float) $order->delivery_advance_paid > 0);
+
+        if ($hasAdvance && in_array($newStatus, $restrictedStatuses, true)) {
+            $adminTxnId = $order->delivery_advance_admin_txn_id;
+            $adminVerified = $order->delivery_advance_admin_verified;
+            if (empty(trim((string) $adminTxnId)) || ! $adminVerified) {
+                $message = 'Please set Delivery Advance Admin Transaction ID and mark as verified before confirming/processing/shipping.';
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['status' => 'error', 'message' => $message], 422);
+                }
+                return redirect()->back()->with('error', $message);
+            }
+        }
+
         $oldStatus = $order->status;
         $order->update([
-            'status' => $request->status,
+            'status' => $newStatus,
             'updated_by' => auth()->id(),
         ]);
-        ActivityLog::log('order.status_updated', "Order #{$order->id} status: {$oldStatus} → {$request->status}", $order);
+        ActivityLog::log('order.status_updated', "Order #{$order->id} status: {$oldStatus} → {$newStatus}", $order);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Order status updated.',
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Order status updated.');
     }
 }

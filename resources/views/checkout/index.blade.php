@@ -3,6 +3,15 @@
 @section('title', 'Checkout - ' . config('app.name'))
 
 @section('content')
+@if(session('error'))
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({ icon: 'error', title: 'Error', text: @json(session('error')) });
+    }
+});
+</script>
+@endif
 <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
     <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl">Checkout</h1>
 
@@ -38,6 +47,36 @@
                         <label for="email" class="block text-sm font-medium text-gray-700">Email (optional, for order updates)</label>
                         <input type="email" id="email" name="email" value="{{ old('email', auth()->user()?->email) }}" autocomplete="email" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
                         <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="email"></p>
+                    </div>
+
+                    @php $deliveryAdvanceAmount = config('checkout.delivery_advance_amount', 150); @endphp
+                    <div class="mt-8 border-t border-gray-200 pt-6">
+                        <h2 class="text-lg font-semibold text-gray-900">Delivery Charge Advance (৳{{ number_format($deliveryAdvanceAmount, 0) }})</h2>
+                        <p class="mt-1 text-sm text-gray-600">This is required to confirm your order.</p>
+                        <input type="hidden" name="delivery_charge" value="{{ $deliveryAdvanceAmount }}">
+                        <div class="mt-4 space-y-4">
+                            <div>
+                                <label for="delivery_advance_method" class="block text-sm font-medium text-gray-700">Payment method <span class="text-red-500">*</span></label>
+                                <select id="delivery_advance_method" name="delivery_advance_method" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
+                                    <option value="">Select method</option>
+                                    <option value="bKash" {{ old('delivery_advance_method') === 'bKash' ? 'selected' : '' }}>bKash</option>
+                                    <option value="Nagad" {{ old('delivery_advance_method') === 'Nagad' ? 'selected' : '' }}>Nagad</option>
+                                    <option value="Rocket" {{ old('delivery_advance_method') === 'Rocket' ? 'selected' : '' }}>Rocket</option>
+                                    <option value="Cash" {{ old('delivery_advance_method') === 'Cash' ? 'selected' : '' }}>Cash</option>
+                                </select>
+                                <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="delivery_advance_method"></p>
+                            </div>
+                            <div>
+                                <label for="delivery_advance_txn_id" class="block text-sm font-medium text-gray-700">Transaction ID</label>
+                                <input type="text" id="delivery_advance_txn_id" name="delivery_advance_txn_id" value="{{ old('delivery_advance_txn_id') }}" placeholder="Optional: Transaction ID (if available)" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
+                                <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="delivery_advance_txn_id"></p>
+                            </div>
+                            <div class="flex items-start">
+                                <input type="checkbox" id="delivery_advance_confirmed" name="delivery_advance_confirmed" value="1" {{ old('delivery_advance_confirmed') ? 'checked' : '' }} class="mt-1 h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent">
+                                <label for="delivery_advance_confirmed" class="ml-2 block text-sm font-medium text-gray-700">I have paid ৳{{ number_format($deliveryAdvanceAmount, 0) }} delivery charge advance <span class="text-red-500">*</span></label>
+                            </div>
+                            <p class="checkout-error text-sm text-red-600 hidden" data-for="delivery_advance_confirmed"></p>
+                        </div>
                     </div>
                 </div>
                 <div class="mt-8">
@@ -110,6 +149,11 @@ $(function() {
                 $('#checkout-errors-summary').text(data.message).removeClass('hidden');
             } else {
                 $('#checkout-errors-summary').text('Something went wrong. Please try again.').removeClass('hidden');
+            }
+            if (data && data.message && typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Validation Error', text: data.message });
+            } else if ((!data || !data.message) && typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong. Please try again.' });
             }
         });
     });

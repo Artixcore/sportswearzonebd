@@ -82,17 +82,43 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1">Sort order</label>
                 <input type="number" name="sort_order" value="{{ old('sort_order', $product->sort_order) }}" class="w-full rounded border-slate-300 shadow-sm">
             </div>
-            @if($product->images->isNotEmpty())
-                <p class="text-sm text-slate-500">Current images:</p>
-                <div class="flex gap-2 flex-wrap">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Main photo</label>
+                @php
+                    $mainImagePath = $product->main_image_path ?? $product->images->first()?->path;
+                @endphp
+                @if($mainImagePath)
+                    <div class="mb-2">
+                        <img id="current_main_preview" src="{{ asset('storage/' . $mainImagePath) }}" alt="Main" class="w-24 h-24 object-cover rounded border border-slate-200">
+                    </div>
+                @else
+                    <div id="current_main_preview" class="hidden mb-2">
+                        <img src="" alt="Main" class="w-24 h-24 object-cover rounded border border-slate-200">
+                    </div>
+                @endif
+                <label class="block text-xs text-slate-500 mb-1">Replace main photo (optional)</label>
+                <input type="file" name="main_image" id="edit_main_image" accept=".jpg,.jpeg,.png,.webp" class="w-full text-sm">
+                <div id="edit_main_image_preview" class="mt-2 hidden">
+                    <img src="" alt="New main preview" class="w-24 h-24 object-cover rounded border border-slate-200">
+                </div>
+                @error('main_image')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Gallery photos</label>
+                <p class="text-xs text-slate-500 mb-1">Up to 4 total. Delete below or add more.</p>
+                <div id="gallery_list" class="space-y-2 mb-2">
                     @foreach($product->images as $img)
-                        <img src="{{ asset('storage/' . $img->path) }}" alt="" class="w-14 h-14 object-cover rounded">
+                        <div class="flex items-center gap-2 gallery-item" data-image-id="{{ $img->id }}">
+                            <img src="{{ asset('storage/' . $img->path) }}" alt="" class="w-14 h-14 object-cover rounded border border-slate-200">
+                            <button type="button" class="gallery-delete-btn px-2 py-1 text-sm text-red-600 hover:text-red-800 border border-red-200 rounded hover:bg-red-50" data-image-id="{{ $img->id }}">Delete</button>
+                        </div>
                     @endforeach
                 </div>
-            @endif
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Add more images</label>
-                <input type="file" name="images[]" multiple accept="image/*" class="w-full text-sm">
+                <label class="block text-xs text-slate-500 mb-1">Add more gallery photos</label>
+                <input type="file" name="gallery_images[]" id="edit_gallery_images" multiple accept=".jpg,.jpeg,.png,.webp" class="w-full text-sm">
+                <div id="edit_gallery_preview" class="mt-2 flex flex-wrap gap-2"></div>
+                @error('gallery_images')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                @error('gallery_images.*')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
             </div>
         </div>
     </div>
@@ -101,4 +127,93 @@
         <a href="{{ route('admin.products.index') }}" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300">Cancel</a>
     </div>
 </form>
+@push('scripts')
+<script>
+(function() {
+    var deleteImageUrlBase = {{ json_encode(route('admin.products.images.destroy', [$product, 0])) }};
+    var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var editMainInput = document.getElementById('edit_main_image');
+        var editMainPreview = document.getElementById('edit_main_image_preview');
+        if (editMainInput && editMainPreview) {
+            editMainInput.addEventListener('change', function() {
+                var file = this.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        editMainPreview.querySelector('img').src = e.target.result;
+                        editMainPreview.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    editMainPreview.classList.add('hidden');
+                }
+            });
+        }
+        var editGalleryInput = document.getElementById('edit_gallery_images');
+        var editGalleryPreview = document.getElementById('edit_gallery_preview');
+        if (editGalleryInput && editGalleryPreview) {
+            editGalleryInput.addEventListener('change', function() {
+                editGalleryPreview.innerHTML = '';
+                var files = Array.from(this.files);
+                files.forEach(function(file) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'w-16 h-16 object-cover rounded border border-slate-200';
+                        img.alt = 'Preview';
+                        editGalleryPreview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+        }
+
+        document.querySelectorAll('.gallery-delete-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var imageId = this.getAttribute('data-image-id');
+                var row = this.closest('.gallery-item');
+                if (typeof showConfirm !== 'function') {
+                    if (confirm('Remove this gallery image?')) {
+                        doDelete(imageId, row);
+                    }
+                    return;
+                }
+                showConfirm('Remove gallery image?', 'This image will be deleted from the product.', function() {
+                    doDelete(imageId, row);
+                });
+            });
+        });
+
+        function doDelete(imageId, rowEl) {
+            var url = deleteImageUrlBase.replace(/\/0$/, '/' + imageId);
+            var xhr = new XMLHttpRequest();
+            xhr.open('DELETE', url);
+            xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken || '');
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    if (rowEl) rowEl.remove();
+                    if (typeof showAlert === 'function') showAlert('success', 'Done', 'Gallery image deleted.');
+                } else {
+                    var msg = 'Failed to delete image.';
+                    try {
+                        var j = JSON.parse(xhr.responseText);
+                        if (j.message) msg = j.message;
+                    } catch (e) {}
+                    if (typeof showAlert === 'function') showAlert('error', 'Error', msg);
+                }
+            };
+            xhr.onerror = function() {
+                if (typeof showAlert === 'function') showAlert('error', 'Error', 'Request failed.');
+            };
+            xhr.send();
+        }
+    });
+})();
+</script>
+@endpush
 @endsection

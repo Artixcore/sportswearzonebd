@@ -27,6 +27,7 @@ class Product extends Model
         'is_active',
         'is_featured',
         'sort_order',
+        'main_image_path',
         'created_by',
         'updated_by',
     ];
@@ -81,9 +82,23 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function getPrimaryImageAttribute(): ?ProductImage
+    public function getPrimaryImageAttribute(): \stdClass|ProductImage|null
     {
+        if ($this->main_image_path) {
+            return (object) ['path' => $this->main_image_path];
+        }
         return $this->images->first();
+    }
+
+    /**
+     * Main image first (if set), then gallery images. Use for product show gallery + thumbs.
+     */
+    public function getDisplayImagesAttribute(): \Illuminate\Support\Collection
+    {
+        $main = $this->main_image_path
+            ? collect([(object) ['path' => $this->main_image_path]])
+            : collect();
+        return $main->concat($this->images);
     }
 
     public function getDiscountPercentAttribute(): ?int

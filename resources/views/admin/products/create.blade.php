@@ -79,8 +79,21 @@
                 <input type="number" name="sort_order" value="{{ old('sort_order', 0) }}" class="w-full rounded border-slate-300 shadow-sm">
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Images</label>
-                <input type="file" name="images[]" multiple accept="image/*" class="w-full text-sm">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Main photo *</label>
+                <input type="file" name="main_image" id="main_image" accept=".jpg,.jpeg,.png,.webp" class="w-full text-sm">
+                <p class="text-xs text-slate-500 mt-0.5">JPG, PNG or WebP, max 2MB</p>
+                <div id="main_image_preview" class="mt-2 hidden">
+                    <img src="" alt="Main preview" class="w-24 h-24 object-cover rounded border border-slate-200">
+                </div>
+                @error('main_image')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Gallery photos (optional)</label>
+                <input type="file" name="gallery_images[]" id="gallery_images" multiple accept=".jpg,.jpeg,.png,.webp" class="w-full text-sm">
+                <p class="text-xs text-slate-500 mt-0.5">Up to 4 images, optional. JPG, PNG or WebP, max 2MB each.</p>
+                <div id="gallery_preview" class="mt-2 flex flex-wrap gap-2"></div>
+                @error('gallery_images')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                @error('gallery_images.*')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
             </div>
         </div>
     </div>
@@ -90,3 +103,46 @@
     </div>
 </form>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var mainInput = document.getElementById('main_image');
+    var mainPreview = document.getElementById('main_image_preview');
+    if (mainInput && mainPreview) {
+        mainInput.addEventListener('change', function() {
+            var file = this.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    mainPreview.querySelector('img').src = e.target.result;
+                    mainPreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                mainPreview.classList.add('hidden');
+            }
+        });
+    }
+    var galleryInput = document.getElementById('gallery_images');
+    var galleryPreview = document.getElementById('gallery_preview');
+    if (galleryInput && galleryPreview) {
+        galleryInput.addEventListener('change', function() {
+            galleryPreview.innerHTML = '';
+            var files = Array.from(this.files).slice(0, 4);
+            files.forEach(function(file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'w-16 h-16 object-cover rounded border border-slate-200';
+                    img.alt = 'Gallery preview';
+                    galleryPreview.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+    }
+});
+</script>
+@endpush

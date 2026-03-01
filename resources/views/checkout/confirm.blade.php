@@ -39,6 +39,29 @@
                 </dl>
             </div>
 
+            @php $deliveryAdvanceAmount = config('checkout.delivery_advance_amount', 150); @endphp
+            <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h2 class="text-lg font-semibold text-gray-900">Delivery Charge Advance</h2>
+                <dl class="mt-4 space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">Amount</dt>
+                        <dd class="font-medium text-gray-900">৳{{ number_format($deliveryAdvanceAmount, 0) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Method</dt>
+                        <dd class="font-medium text-gray-900">{{ $customer['delivery_advance_method'] ?? '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Transaction ID</dt>
+                        <dd class="font-medium text-gray-900">{{ !empty($customer['delivery_advance_txn_id']) ? $customer['delivery_advance_txn_id'] : 'Not provided' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Status</dt>
+                        <dd class="font-medium text-gray-900">Customer confirmed paid</dd>
+                    </div>
+                </dl>
+            </div>
+
             <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                 <h2 class="text-lg font-semibold text-gray-900">Items</h2>
                 <ul class="mt-4 divide-y divide-gray-200">
@@ -106,16 +129,24 @@ $(function() {
             dataType: 'json'
         }).done(function(res) {
             if (res.status === 'success' && res.redirect) {
-                window.location.href = res.redirect;
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'success', title: 'Success', text: res.message || 'Order placed successfully.' }).then(function() {
+                        window.location.href = res.redirect;
+                    });
+                } else {
+                    window.location.href = res.redirect;
+                }
                 return;
             }
             btn.prop('disabled', false).removeClass('opacity-75');
-            if (typeof showToast === 'function') showToast('Something went wrong.', 'error');
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+            else if (typeof showToast === 'function') showToast('Something went wrong.', 'error');
         }).fail(function(xhr) {
             btn.prop('disabled', false).removeClass('opacity-75');
             var msg = 'Could not place order.';
             if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-            if (typeof showAlert === 'function') showAlert('error', 'Error', msg);
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: msg });
+            else if (typeof showAlert === 'function') showAlert('error', 'Error', msg);
             else if (typeof showToast === 'function') showToast(msg, 'error');
         });
     });

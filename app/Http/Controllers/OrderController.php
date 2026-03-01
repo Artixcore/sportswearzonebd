@@ -70,6 +70,7 @@ class OrderController extends Controller
         $tax = 0;
         $total = $subtotal + $shipping + $tax;
         $purchaseEventId = Str::uuid()->toString();
+        $deliveryAdvanceAmount = config('checkout.delivery_advance_amount', 150);
 
         try {
             $order = Order::create([
@@ -96,6 +97,14 @@ class OrderController extends Controller
                 'billing_name' => $customer['name'],
                 'billing_phone' => $customer['phone'],
                 'billing_address' => $customer['address'],
+                'delivery_charge' => $deliveryAdvanceAmount,
+                'delivery_advance_paid' => $deliveryAdvanceAmount,
+                'delivery_advance_method' => $customer['delivery_advance_method'] ?? null,
+                'delivery_advance_txn_id' => $customer['delivery_advance_txn_id'] ?? null,
+                'delivery_advance_customer_confirmed' => true,
+                'delivery_advance_admin_txn_id' => null,
+                'delivery_advance_admin_verified' => false,
+                'delivery_settlement_status' => 'pending',
             ]);
 
             foreach ($items as $item) {
@@ -125,6 +134,7 @@ class OrderController extends Controller
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'status' => 'success',
+                    'message' => 'Order placed successfully.',
                     'redirect' => route('orders.success'),
                 ]);
             }

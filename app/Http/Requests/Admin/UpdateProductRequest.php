@@ -30,8 +30,28 @@ class UpdateProductRequest extends FormRequest
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
-            'images' => 'nullable|array',
-            'images.*' => 'image|max:2048',
+            'main_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'gallery_images' => 'nullable|array',
+            'gallery_images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $product = $this->route('product');
+            if (! $product) {
+                return;
+            }
+            $existingCount = $product->images()->count();
+            $newFiles = $this->hasFile('gallery_images') ? count($this->file('gallery_images')) : 0;
+            $total = $existingCount + $newFiles;
+            if ($total > 4) {
+                $validator->errors()->add(
+                    'gallery_images',
+                    'Total gallery images cannot exceed 4. You have ' . $existingCount . ' existing and are adding ' . $newFiles . '.'
+                );
+            }
+        });
     }
 }

@@ -9,8 +9,11 @@ use App\Models\ActivityLog;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -57,6 +60,7 @@ class ProductController extends Controller
     public function store(StoreProductRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+        unset($validated['main_image'], $validated['gallery_images']);
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
         $validated['is_active'] = $request->boolean('is_active');
         $validated['is_featured'] = $request->boolean('is_featured');
@@ -66,16 +70,43 @@ class ProductController extends Controller
         $validated['created_by'] = auth()->id();
         $validated['updated_by'] = auth()->id();
 
-        $product = Product::create($validated);
+        $uploadedPaths = [];
 
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $i => $file) {
-                $path = $file->store('products/' . $product->id, 'public');
-                $product->images()->create(['path' => $path, 'sort_order' => $i]);
+        try {
+            DB::transaction(function () use ($validated, $request, &$uploadedPaths) {
+                $product = Product::create($validated);
+
+                $mainDir = config('filesystems.product_paths.main_dir', 'products/main');
+                $galleryDir = config('filesystems.product_paths.gallery_dir', 'products/gallery');
+                $disk = Storage::disk('public');
+
+                $mainFile = $request->file('main_image');
+                $mainPath = $disk->putFileAs(
+                    $mainDir,
+                    $mainFile,
+                    $this->uniqueFilename($mainFile)
+                );
+                $uploadedPaths[] = $mainPath;
+                $product->update(['main_image_path' => $mainPath]);
+
+                if ($request->hasFile('gallery_images')) {
+                    $sortOrder = 0;
+                    foreach ($request->file('gallery_images') as $file) {
+                        $path = $disk->putFileAs($galleryDir, $file, $this->uniqueFilename($file));
+                        $uploadedPaths[] = $path;
+                        $product->images()->create(['path' => $path, 'sort_order' => $sortOrder++]);
+                    }
+                }
+
+                ActivityLog::log('product.created', 'Product created: ' . $product->name, $product);
+            });
+        } catch (\Throwable $e) {
+            foreach ($uploadedPaths as $path) {
+                Storage::disk('public')->delete($path);
             }
+            throw $e;
         }
 
-        ActivityLog::log('product.created', 'Product created: ' . $product->name, $product);
         return redirect()->route('admin.products.index')->with('success', 'Product created.');
     }
 
@@ -89,6 +120,7 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
         $validated = $request->validated();
+        unset($validated['main_image'], $validated['gallery_images']);
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
         $validated['is_active'] = $request->boolean('is_active');
         $validated['is_featured'] = $request->boolean('is_featured');
@@ -97,25 +129,84 @@ class ProductController extends Controller
         $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
         $validated['updated_by'] = auth()->id();
 
-        $product->update($validated);
+        $uploadedPaths = [];
 
-        if ($request->hasFile('images')) {
-            $start = $product->images()->max('sort_order') + 1;
-            foreach ($request->file('images') as $i => $file) {
-                $path = $file->store('products/' . $product->id, 'public');
-                $product->images()->create(['path' => $path, 'sort_order' => $start + $i]);
+        try {
+            DB::transaction(function () use ($validated, $request, $product, &$uploadedPaths) {
+                $mainDir = config('filesystems.product_paths.main_dir', 'products/main');
+                $galleryDir = config('filesystems.product_paths.gallery_dir', 'products/gallery');
+                $disk = Storage::disk('public');
+
+                if ($request->hasFile('main_image')) {
+                    if ($product->main_image_path) {
+                        $disk->delete($product->main_image_path);
+                    }
+                    $mainFile = $request->file('main_image');
+                    $mainPath = $disk->putFileAs($mainDir, $mainFile, $this->uniqueFilename($mainFile));
+                    $uploadedPaths[] = $mainPath;
+                    $validated['main_image_path'] = $mainPath;
+                }
+
+                $product->update($validated);
+
+                if ($request->hasFile('gallery_images')) {
+                    $start = $product->images()->max('sort_order') + 1;
+                    foreach ($request->file('gallery_images') as $i => $file) {
+                        $path = $disk->putFileAs($galleryDir, $file, $this->uniqueFilename($file));
+                        $uploadedPaths[] = $path;
+                        $product->images()->create(['path' => $path, 'sort_order' => $start + $i]);
+                    }
+                }
+
+                ActivityLog::log('product.updated', 'Product updated: ' . $product->name, $product);
+            });
+        } catch (\Throwable $e) {
+            foreach ($uploadedPaths as $path) {
+                Storage::disk('public')->delete($path);
             }
+            throw $e;
         }
 
-        ActivityLog::log('product.updated', 'Product updated: ' . $product->name, $product);
         return redirect()->route('admin.products.index')->with('success', 'Product updated.');
     }
 
     public function destroy(Product $product): RedirectResponse
     {
         $name = $product->name;
+        $disk = Storage::disk('public');
+        try {
+            if ($product->main_image_path) {
+                $disk->delete($product->main_image_path);
+            }
+            foreach ($product->images as $image) {
+                $disk->delete($image->path);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
         $product->delete();
         ActivityLog::log('product.deleted', 'Product deleted: ' . $name);
         return redirect()->route('admin.products.index')->with('success', 'Product deleted.');
+    }
+
+    public function destroyImage(Product $product, ProductImage $image): JsonResponse
+    {
+        if ($image->product_id !== $product->id) {
+            return response()->json(['message' => 'Image does not belong to this product.'], 403);
+        }
+        try {
+            Storage::disk('public')->delete($image->path);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['message' => 'Failed to delete file from storage.'], 500);
+        }
+        $image->delete();
+        return response()->json(['success' => true, 'message' => 'Gallery image deleted.']);
+    }
+
+    private function uniqueFilename(\Illuminate\Http\UploadedFile $file): string
+    {
+        $ext = $file->getClientOriginalExtension() ?: $file->guessExtension();
+        return Str::uuid()->toString() . '_' . time() . '.' . strtolower($ext);
     }
 }

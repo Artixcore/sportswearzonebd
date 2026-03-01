@@ -30,6 +30,14 @@ class Order extends Model
         'billing_address',
         'created_by',
         'updated_by',
+        'delivery_charge',
+        'delivery_advance_paid',
+        'delivery_advance_method',
+        'delivery_advance_txn_id',
+        'delivery_advance_customer_confirmed',
+        'delivery_advance_admin_txn_id',
+        'delivery_advance_admin_verified',
+        'delivery_settlement_status',
     ];
 
     protected function casts(): array
@@ -40,6 +48,10 @@ class Order extends Model
             'shipping' => 'decimal:2',
             'total' => 'decimal:2',
             'meta' => 'array',
+            'delivery_charge' => 'decimal:2',
+            'delivery_advance_paid' => 'decimal:2',
+            'delivery_advance_customer_confirmed' => 'boolean',
+            'delivery_advance_admin_verified' => 'boolean',
         ];
     }
 

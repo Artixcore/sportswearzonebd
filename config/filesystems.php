@@ -77,4 +77,14 @@ return [
         public_path('storage') => storage_path('app/public'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Product Image Paths (storage/app/public relative)
+    |--------------------------------------------------------------------------
+    */
+    'product_paths' => [
+        'main_dir' => 'products/main',
+        'gallery_dir' => 'products/gallery',
+    ],
+
 ];

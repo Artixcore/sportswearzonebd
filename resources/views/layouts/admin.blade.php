@@ -133,6 +133,20 @@
             </main>
         </div>
     </div>
+    @if(session('success') || session('error'))
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof showAlert === 'function') {
+            @if(session('success'))
+            showAlert('success', 'Success', {{ json_encode(session('success')) }});
+            @endif
+            @if(session('error'))
+            showAlert('error', 'Error', {{ json_encode(session('error')) }});
+            @endif
+        }
+    });
+    </script>
+    @endif
     @stack('scripts')
 </body>
 </html>

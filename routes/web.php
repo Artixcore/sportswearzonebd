@@ -69,6 +69,7 @@ Route::middleware('auth')->group(function () {
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
     Route::get('/', AdminDashboardController::class)->name('dashboard');
+    Route::delete('products/{product}/images/{image}', [AdminProductController::class, 'destroyImage'])->name('products.images.destroy');
     Route::resource('products', AdminProductController::class)->except(['show']);
     Route::get('products/{product}/variants', [AdminProductVariantController::class, 'index'])->name('products.variants.index');
     Route::get('products/{product}/variants/create', [AdminProductVariantController::class, 'create'])->name('products.variants.create');
@@ -84,6 +85,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::get('orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
+    Route::post('orders/{order}/delivery-advance', [AdminOrderController::class, 'updateDeliveryAdvance'])->name('orders.updateDeliveryAdvance');
     Route::post('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::get('pos', [AdminPosController::class, 'index'])->name('pos.index');
     Route::get('pos/search-products', [AdminPosController::class, 'searchProducts'])->name('pos.searchProducts');

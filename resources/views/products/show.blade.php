@@ -40,8 +40,8 @@
         {{-- Image gallery --}}
         <div class="space-y-3">
             <div id="product-main-image" class="aspect-square overflow-hidden rounded-xl bg-muted">
-                @if($product->images->isNotEmpty())
-                    @foreach($product->images as $i => $img)
+                @if($product->display_images->isNotEmpty())
+                    @foreach($product->display_images as $i => $img)
                         <img data-gallery-main="{{ $i }}" src="{{ asset('storage/' . $img->path) }}" alt="{{ $product->name }}" class="h-full w-full object-contain {{ $i === 0 ? '' : 'hidden' }}">
                     @endforeach
                 @else
@@ -50,9 +50,9 @@
                     </div>
                 @endif
             </div>
-            @if($product->images->count() > 1)
+            @if($product->display_images->count() > 1)
                 <div class="flex gap-2 overflow-x-auto pb-2">
-                    @foreach($product->images as $i => $img)
+                    @foreach($product->display_images as $i => $img)
                         <button type="button" data-gallery-thumb="{{ $i }}" class="gallery-thumb shrink-0 rounded-lg border-2 border-transparent focus:border-accent focus:outline-none">
                             <img src="{{ asset('storage/' . $img->path) }}" alt="" class="h-16 w-16 rounded-lg object-cover">
                         </button>
@@ -157,7 +157,7 @@
     @endif
 </div>
 
-@if($product->images->count() > 1)
+@if($product->display_images->count() > 1)
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var thumbs = document.querySelectorAll('[data-gallery-thumb]');
