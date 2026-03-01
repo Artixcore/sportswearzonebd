@@ -1,18 +1,21 @@
 @extends('layouts.app')
 
-@section('title', $product->name . ' - ' . config('app.name'))
-@section('meta_description', Str::limit($product->short_description ?? $product->description, 160))
+@section('title', $product->meta_title ?? $product->name . ' - ' . config('app.name'))
+@section('meta_description', $product->meta_description ?? Str::limit($product->short_description ?? $product->description ?? '', 160))
 
 @push('meta')
-<meta property="og:title" content="{{ $product->name }}">
-<meta property="og:description" content="{{ Str::limit($product->short_description ?? $product->description, 200) }}">
+@if($product->meta_keywords)
+<meta name="keywords" content="{{ $product->meta_keywords }}">
+@endif
+<meta property="og:title" content="{{ $product->meta_title ?? $product->name }}">
+<meta property="og:description" content="{{ $product->meta_description ?? Str::limit($product->short_description ?? $product->description ?? '', 200) }}">
 <meta property="og:type" content="product">
 <meta property="og:url" content="{{ url()->current() }}">
 @if($product->primaryImage)
 <meta property="og:image" content="{{ asset('storage/' . $product->primaryImage->path) }}">
 @endif
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{ $product->name }}">
+<meta name="twitter:title" content="{{ $product->meta_title ?? $product->name }}">
 @endpush
 
 @push('json-ld')
@@ -59,15 +62,23 @@
 
         {{-- Info --}}
         <div>
-            <span class="inline-block rounded-md bg-base px-2 py-0.5 text-xs font-medium text-white">{{ $product->category->name ?? 'Uncategorized' }}</span>
+            <span class="inline-block rounded-md bg-base px-2 py-0.5 text-xs font-medium text-white">
+                @if($product->category)
+                    {{ $product->category->parent_id ? $product->category->parent->name . ' › ' . $product->category->name : $product->category->name }}
+                @else
+                    Uncategorized
+                @endif
+            </span>
             <h1 class="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">{{ $product->name }}</h1>
             <div class="mt-3 flex flex-wrap items-center gap-2">
-                <span class="text-2xl font-bold text-gray-900">৳{{ number_format($product->price, 0) }}</span>
-                @if($product->compare_at_price && $product->compare_at_price > $product->price)
-                    <span class="text-lg text-gray-500 line-through">৳{{ number_format($product->compare_at_price, 0) }}</span>
-                    @if($product->discount_percent)
-                        <span class="rounded bg-red-100 px-2 py-0.5 text-sm font-medium text-red-700">{{ $product->discount_percent }}% Off</span>
+                @if($product->has_discount)
+                    <span class="text-lg text-gray-500 line-through">৳{{ number_format($product->original_price, 0) }}</span>
+                    <span class="text-2xl font-bold text-gray-900">৳{{ number_format($product->final_price, 0) }}</span>
+                    @if($product->discount_label)
+                        <span class="rounded bg-red-100 px-2 py-0.5 text-sm font-medium text-red-700">{{ $product->discount_label }}</span>
                     @endif
+                @else
+                    <span class="text-2xl font-bold text-gray-900">৳{{ number_format($product->final_price, 0) }}</span>
                 @endif
             </div>
             <p class="mt-2 text-sm {{ $product->stock > 0 ? 'text-green-600' : 'text-red-600' }}">
@@ -84,13 +95,13 @@
                 @csrf
                 <input type="hidden" name="product_id" value="{{ $product->id }}">
 
-                {{-- Size (mock) --}}
+                {{-- Size --}}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Size</label>
-                    <div class="mt-1 flex gap-2">
-                        @foreach(['S', 'M', 'L', 'XL'] as $s)
+                    <label class="block text-sm font-medium text-gray-700">Size <span class="text-red-500">*</span></label>
+                    <div class="mt-1 flex flex-wrap gap-2">
+                        @foreach($allowedSizes as $s)
                             <label class="cursor-pointer rounded-lg border border-gray-300 px-3 py-2 text-sm hover:border-accent has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-white">
-                                <input type="radio" name="size" value="{{ $s }}" class="sr-only" {{ $loop->first ? 'checked' : '' }}>
+                                <input type="radio" name="size" value="{{ $s }}" class="sr-only" {{ $loop->first ? 'checked' : '' }} required>
                                 {{ $s }}
                             </label>
                         @endforeach

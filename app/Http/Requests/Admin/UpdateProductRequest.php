@@ -33,6 +33,10 @@ class UpdateProductRequest extends FormRequest
             'main_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'gallery_images' => 'nullable|array',
             'gallery_images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            'meta_title' => 'nullable|string|max:60',
+            'meta_description' => 'nullable|string|max:160',
+            'meta_keywords' => 'nullable|string|max:512',
+            'size_type' => 'nullable|string|in:standard,numeric_panjabi',
         ];
     }
 

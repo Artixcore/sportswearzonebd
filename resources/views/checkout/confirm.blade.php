@@ -39,29 +39,6 @@
                 </dl>
             </div>
 
-            @php $deliveryAdvanceAmount = config('checkout.delivery_advance_amount', 150); @endphp
-            <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 class="text-lg font-semibold text-gray-900">Delivery Charge Advance</h2>
-                <dl class="mt-4 space-y-2 text-sm">
-                    <div class="flex justify-between">
-                        <dt class="text-gray-500">Amount</dt>
-                        <dd class="font-medium text-gray-900">৳{{ number_format($deliveryAdvanceAmount, 0) }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-gray-500">Method</dt>
-                        <dd class="font-medium text-gray-900">{{ $customer['delivery_advance_method'] ?? '—' }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-gray-500">Transaction ID</dt>
-                        <dd class="font-medium text-gray-900">{{ !empty($customer['delivery_advance_txn_id']) ? $customer['delivery_advance_txn_id'] : 'Not provided' }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-gray-500">Status</dt>
-                        <dd class="font-medium text-gray-900">Customer confirmed paid</dd>
-                    </div>
-                </dl>
-            </div>
-
             <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                 <h2 class="text-lg font-semibold text-gray-900">Items</h2>
                 <ul class="mt-4 divide-y divide-gray-200">
@@ -75,10 +52,10 @@
                                 @endif
                                 <div>
                                     <span class="font-medium text-gray-900">{{ $item->product->name }}</span>
-                                    <span class="block text-sm text-gray-500">Qty: {{ $item->quantity }}</span>
+                                    <span class="block text-sm text-gray-500">Qty: {{ $item->quantity }} @if(!empty($item->size))· Size: {{ $item->size }}@endif</span>
                                 </div>
                             </div>
-                            <span class="font-medium text-gray-900">৳{{ number_format($item->product->price * $item->quantity, 0) }}</span>
+                            <span class="font-medium text-gray-900">৳{{ number_format($item->product->final_price * $item->quantity, 0) }}</span>
                         </li>
                     @endforeach
                 </ul>

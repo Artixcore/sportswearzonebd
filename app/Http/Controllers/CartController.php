@@ -12,15 +12,47 @@ use Illuminate\View\View;
 
 class CartController extends Controller
 {
+    /**
+     * Parse cart key "productId_size" into [productId, size]. Supports legacy key "productId".
+     */
+    private function parseCartKey(string $key): array
+    {
+        $key = (string) $key;
+        $lastUnderscore = strrpos($key, '_');
+        if ($lastUnderscore === false) {
+            return [(int) $key, null];
+        }
+        return [(int) substr($key, 0, $lastUnderscore), substr($key, $lastUnderscore + 1)];
+    }
+
+    /**
+     * Build cart key from product id and size.
+     */
+    private function cartKey(int $productId, string $size): string
+    {
+        return $productId . '_' . $size;
+    }
+
     public function index(): View
     {
         $cart = session('cart', []);
-        $productIds = array_keys($cart);
-        $products = Product::with('images')->whereIn('id', $productIds)->get()->keyBy('id');
         $cartItems = [];
-        foreach ($cart as $id => $qty) {
+        $productIds = [];
+        foreach (array_keys($cart) as $k) {
+            [$id] = $this->parseCartKey((string) $k);
+            $productIds[$id] = true;
+        }
+        $productIds = array_keys($productIds);
+        $products = Product::with('images')->whereIn('id', $productIds)->get()->keyBy('id');
+        foreach ($cart as $key => $qty) {
+            [$id, $size] = $this->parseCartKey((string) $key);
             if ($products->has($id)) {
-                $cartItems[] = (object) ['product' => $products[$id], 'quantity' => (int) $qty];
+                $cartItems[] = (object) [
+                    'product' => $products[$id],
+                    'quantity' => (int) $qty,
+                    'size' => $size ?? '',
+                    'cart_key' => (string) $key,
+                ];
             }
         }
 
@@ -31,9 +63,11 @@ class CartController extends Controller
     {
         $validated = $request->validated();
         $id = (int) $validated['product_id'];
+        $size = (string) $validated['size'];
         $qty = (int) ($validated['quantity'] ?? 1);
         $cart = session('cart', []);
-        $cart[$id] = ($cart[$id] ?? 0) + $qty;
+        $key = $this->cartKey($id, $size);
+        $cart[$key] = ($cart[$key] ?? 0) + $qty;
         session(['cart' => $cart]);
 
         $product = Product::find($id);
@@ -43,12 +77,12 @@ class CartController extends Controller
             $capi->sendAddToCart($product, $qty, $eventId);
         }
 
+        $totals = $this->cartTotals(session('cart', []));
         if ($request->wantsJson() || $request->ajax()) {
-            $cartCount = (int) array_sum(session('cart', []));
             $data = [
                 'status' => 'success',
                 'message' => 'Added to cart.',
-                'cart_count' => $cartCount,
+                'cart_count' => $totals['count'],
             ];
             if ($request->input('redirect') === 'checkout') {
                 $data['redirect'] = route('checkout.index');
@@ -68,22 +102,24 @@ class CartController extends Controller
         $validated = $request->validated();
         $cart = session('cart', []);
         $id = (int) $validated['product_id'];
+        $size = (string) $validated['size'];
         $qty = (int) $validated['quantity'];
+        $key = $this->cartKey($id, $size);
         $product = Product::find($id);
         $removed = false;
 
         if ($qty <= 0) {
-            unset($cart[$id]);
+            unset($cart[$key]);
             $removed = true;
         } else {
-            $cart[$id] = $qty;
+            $cart[$key] = $qty;
         }
         session(['cart' => $cart]);
 
         $totals = $this->cartTotals(session('cart', []));
         $itemSubtotal = 0;
         if ($product && ! $removed) {
-            $itemSubtotal = (float) $product->price * $qty;
+            $itemSubtotal = (float) $product->final_price * $qty;
         }
 
         if ($request->wantsJson() || $request->ajax()) {
@@ -99,14 +135,25 @@ class CartController extends Controller
         return redirect()->route('cart.index')->with('success', 'Cart updated.');
     }
 
-    public function remove(int $productId, Request $request): JsonResponse|RedirectResponse
+    public function remove(Request $request): JsonResponse|RedirectResponse
     {
+        $request->validate([
+            'product_id' => 'required|integer|min:1',
+            'size' => 'nullable|string|max:32',
+        ]);
         $cart = session('cart', []);
-        unset($cart[$productId]);
+        $id = (int) $request->product_id;
+        $size = (string) ($request->size ?? '');
+        $key = $this->cartKey($id, $size);
+        unset($cart[$key]);
+        if ($size === '') {
+            unset($cart[$id]);
+            unset($cart[(string) $id]);
+        }
         session(['cart' => $cart]);
 
+        $totals = $this->cartTotals(session('cart', []));
         if ($request->wantsJson() || $request->ajax()) {
-            $totals = $this->cartTotals(session('cart', []));
             return response()->json([
                 'status' => 'success',
                 'cart_total' => $totals['total'],
@@ -133,16 +180,24 @@ class CartController extends Controller
         if (empty($cart)) {
             return ['total' => 0, 'count' => 0];
         }
-        $products = Product::whereIn('id', array_keys($cart))->get()->keyBy('id');
+        $productIds = [];
+        foreach (array_keys($cart) as $k) {
+            [$id] = $this->parseCartKey((string) $k);
+            $productIds[$id] = true;
+        }
+        $products = Product::whereIn('id', array_keys($productIds))->get()->keyBy('id');
         $total = 0;
-        foreach ($cart as $id => $qty) {
+        $count = 0;
+        foreach ($cart as $key => $qty) {
+            [$id] = $this->parseCartKey((string) $key);
             if ($products->has($id)) {
-                $total += (float) $products[$id]->price * (int) $qty;
+                $total += (float) $products[$id]->final_price * (int) $qty;
+                $count += (int) $qty;
             }
         }
         return [
             'total' => round($total, 2),
-            'count' => (int) array_sum($cart),
+            'count' => $count,
         ];
     }
 }

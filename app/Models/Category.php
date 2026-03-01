@@ -19,6 +19,7 @@ class Category extends Model
         'meta_title',
         'meta_description',
         'sort_order',
+        'is_active',
         'created_by',
         'updated_by',
     ];
@@ -27,7 +28,13 @@ class Category extends Model
     {
         return [
             'sort_order' => 'integer',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 
     public function parent(): BelongsTo

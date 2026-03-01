@@ -18,16 +18,24 @@ class CheckoutController extends Controller
         if (empty($cart)) {
             return redirect()->route('shop.index')->with('error', 'Your cart is empty.');
         }
-        $productIds = array_keys($cart);
+        $productIds = [];
+        foreach (array_keys($cart) as $key) {
+            $parts = explode('_', (string) $key, 2);
+            $productIds[] = (int) $parts[0];
+        }
+        $productIds = array_unique($productIds);
         $products = Product::with('images')->whereIn('id', $productIds)->get()->keyBy('id');
         $cartItems = [];
         $subtotal = 0;
-        foreach ($cart as $id => $qty) {
+        foreach ($cart as $key => $qty) {
+            $parts = explode('_', (string) $key, 2);
+            $id = (int) $parts[0];
+            $size = $parts[1] ?? '';
             if ($products->has($id)) {
                 $p = $products[$id];
                 $qty = (int) $qty;
-                $cartItems[] = (object) ['product' => $p, 'quantity' => $qty];
-                $subtotal += $p->price * $qty;
+                $cartItems[] = (object) ['product' => $p, 'quantity' => $qty, 'size' => $size];
+                $subtotal += $p->final_price * $qty;
             }
         }
         $shipping = 0;
@@ -80,23 +88,24 @@ class CheckoutController extends Controller
             return redirect()->route('checkout.index')->with('error', 'Please enter your details first.');
         }
 
-        $allowedMethods = ['bKash', 'Nagad', 'Rocket', 'Cash'];
-        $hasAdvanceConfirmed = ! empty($customer['delivery_advance_confirmed'])
-            && in_array($customer['delivery_advance_method'] ?? null, $allowedMethods, true);
-        if (! $hasAdvanceConfirmed) {
-            return redirect()->route('checkout.index')->with('error', 'Please complete the delivery charge advance section.');
+        $productIds = [];
+        foreach (array_keys($cart) as $key) {
+            $parts = explode('_', (string) $key, 2);
+            $productIds[(int) $parts[0]] = true;
         }
-
-        $productIds = array_keys($cart);
+        $productIds = array_keys($productIds);
         $products = Product::with('images')->whereIn('id', $productIds)->get()->keyBy('id');
         $cartItems = [];
         $subtotal = 0;
-        foreach ($cart as $id => $qty) {
+        foreach ($cart as $key => $qty) {
+            $parts = explode('_', (string) $key, 2);
+            $id = (int) $parts[0];
+            $size = $parts[1] ?? '';
             if ($products->has($id)) {
                 $p = $products[$id];
                 $qty = (int) $qty;
-                $cartItems[] = (object) ['product' => $p, 'quantity' => $qty];
-                $subtotal += $p->price * $qty;
+                $cartItems[] = (object) ['product' => $p, 'quantity' => $qty, 'size' => $size];
+                $subtotal += $p->final_price * $qty;
             }
         }
         $shipping = 0;

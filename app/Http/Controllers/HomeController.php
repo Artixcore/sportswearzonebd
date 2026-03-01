@@ -12,13 +12,13 @@ class HomeController extends Controller
     {
         $featuredProducts = Product::where('is_active', true)
             ->where('is_featured', true)
-            ->with('images')
+            ->with(['images', 'category.parent'])
             ->orderBy('sort_order')
             ->limit(8)
             ->get();
 
         $newArrivals = Product::where('is_active', true)
-            ->with('images')
+            ->with(['images', 'category.parent'])
             ->latest()
             ->limit(8)
             ->get();

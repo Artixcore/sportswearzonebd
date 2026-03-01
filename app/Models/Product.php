@@ -28,6 +28,10 @@ class Product extends Model
         'is_featured',
         'sort_order',
         'main_image_path',
+        'size_type',
+        'meta_title',
+        'meta_description',
+        'meta_keywords',
         'created_by',
         'updated_by',
     ];
@@ -101,12 +105,80 @@ class Product extends Model
         return $main->concat($this->images);
     }
 
-    public function getDiscountPercentAttribute(): ?int
+    /**
+     * Whether this product has a valid discount (compare-at price or stored discount %).
+     */
+    public function getHasDiscountAttribute(): bool
     {
-        if ($this->compare_at_price && $this->compare_at_price > $this->price) {
-            return (int) round((1 - $this->price / $this->compare_at_price) * 100);
+        if ($this->compare_at_price && (float) $this->compare_at_price > (float) $this->price) {
+            return true;
         }
-        return null;
+        $raw = $this->getRawOriginal('discount_percent');
+        return $raw !== null && (float) $raw > 0;
+    }
+
+    /**
+     * Final price the customer pays (after discount). Rounded to 2 decimals.
+     */
+    public function getFinalPriceAttribute(): float
+    {
+        $price = (float) $this->getRawOriginal('price');
+        $compareAt = $this->compare_at_price ? (float) $this->compare_at_price : null;
+        $discountPercent = $this->getRawOriginal('discount_percent');
+        $discountPercent = $discountPercent !== null ? (float) $discountPercent : 0;
+
+        if ($compareAt !== null && $compareAt > $price) {
+            return round($price, 2);
+        }
+        if ($discountPercent > 0) {
+            return round($price - ($price * $discountPercent / 100), 2);
+        }
+        return round($price, 2);
+    }
+
+    /**
+     * Original/list price to show with strikethrough when has_discount; null otherwise.
+     */
+    public function getOriginalPriceAttribute(): ?float
+    {
+        if (! $this->has_discount) {
+            return null;
+        }
+        $price = (float) $this->getRawOriginal('price');
+        $compareAt = $this->compare_at_price ? (float) $this->compare_at_price : null;
+        if ($compareAt !== null && $compareAt > $price) {
+            return round($compareAt, 2);
+        }
+        return round($price, 2);
+    }
+
+    /**
+     * Discount badge label, e.g. "-10%". Null when no discount.
+     */
+    public function getDiscountLabelAttribute(): ?string
+    {
+        if (! $this->has_discount) {
+            return null;
+        }
+        $percent = $this->effective_discount_percent;
+        return $percent !== null ? '-' . (int) round($percent) . '%' : null;
+    }
+
+    /**
+     * Effective discount percent for display (from compare-at when applicable, else stored discount_percent).
+     */
+    public function getEffectiveDiscountPercentAttribute(): ?float
+    {
+        if (! $this->has_discount) {
+            return null;
+        }
+        $price = (float) $this->getRawOriginal('price');
+        $compareAt = $this->compare_at_price ? (float) $this->compare_at_price : null;
+        if ($compareAt !== null && $compareAt > $price && $compareAt > 0) {
+            return (1 - $price / $compareAt) * 100;
+        }
+        $raw = $this->getRawOriginal('discount_percent');
+        return $raw !== null ? (float) $raw : null;
     }
 
     public function isLowStock(): bool
@@ -115,5 +187,23 @@ class Product extends Model
             return $this->variants()->whereRaw('stock <= low_stock_threshold')->exists();
         }
         return $this->stock <= $this->low_stock_threshold;
+    }
+
+    /**
+     * Allowed size values for this product based on size_type.
+     * Panjabi: 40, 42, 44. Standard: S, M, L, XL, XXL.
+     */
+    public static function allowedSizesFor(string $sizeType): array
+    {
+        return match ($sizeType) {
+            'numeric_panjabi' => ['40', '42', '44'],
+            'standard' => ['S', 'M', 'L', 'XL', 'XXL'],
+            default => ['S', 'M', 'L', 'XL', 'XXL'],
+        };
+    }
+
+    public function getAllowedSizesAttribute(): array
+    {
+        return self::allowedSizesFor($this->size_type ?? 'standard');
     }
 }

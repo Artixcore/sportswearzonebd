@@ -21,6 +21,15 @@
                         @foreach($categories as $cat)
                             <li>
                                 <a href="{{ route('shop.category', $cat->slug) }}" class="block rounded-lg px-3 py-2 text-sm {{ isset($category) && $category->id === $cat->id ? 'bg-accent font-medium text-white' : 'text-gray-700 hover:bg-muted' }}">{{ $cat->name }}</a>
+                                @if($cat->children->isNotEmpty())
+                                    <ul class="ml-3 mt-0.5 space-y-0.5 border-l border-gray-200 pl-2">
+                                        @foreach($cat->children as $child)
+                                            <li>
+                                                <a href="{{ route('shop.category', $child->slug) }}" class="block rounded-lg px-2 py-1.5 text-sm {{ isset($category) && $category->id === $child->id ? 'bg-accent font-medium text-white' : 'text-gray-600 hover:bg-muted' }}">{{ $child->name }}</a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
                             </li>
                         @endforeach
                     </ul>

@@ -33,12 +33,20 @@ class OrderController extends Controller
             return redirect()->route('checkout.index')->with('error', 'Please enter your details first.');
         }
 
-        $productIds = array_keys($cart);
+        $productIds = [];
+        foreach (array_keys($cart) as $k) {
+            $parts = explode('_', (string) $k, 2);
+            $productIds[(int) $parts[0]] = true;
+        }
+        $productIds = array_keys($productIds);
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
         $subtotal = 0;
         $items = [];
         $insufficient = [];
-        foreach ($cart as $id => $qty) {
+        foreach ($cart as $key => $qty) {
+            $parts = explode('_', (string) $key, 2);
+            $id = (int) $parts[0];
+            $size = $parts[1] ?? '';
             if (! $products->has($id)) {
                 continue;
             }
@@ -48,13 +56,14 @@ class OrderController extends Controller
             if ($available < $qty) {
                 $insufficient[] = $p->name . ($available > 0 ? ' (available: ' . $available . ')' : ' (out of stock)');
             }
-            $subtotal += $p->price * $qty;
+            $subtotal += $p->final_price * $qty;
             $items[] = [
                 'product_id' => $p->id,
                 'name' => $p->name,
-                'price' => $p->price,
+                'price' => $p->final_price,
                 'quantity' => $qty,
                 'sku' => $p->sku,
+                'size' => $size,
             ];
         }
 
@@ -70,7 +79,6 @@ class OrderController extends Controller
         $tax = 0;
         $total = $subtotal + $shipping + $tax;
         $purchaseEventId = Str::uuid()->toString();
-        $deliveryAdvanceAmount = config('checkout.delivery_advance_amount', 150);
 
         try {
             $order = Order::create([
@@ -97,11 +105,11 @@ class OrderController extends Controller
                 'billing_name' => $customer['name'],
                 'billing_phone' => $customer['phone'],
                 'billing_address' => $customer['address'],
-                'delivery_charge' => $deliveryAdvanceAmount,
-                'delivery_advance_paid' => $deliveryAdvanceAmount,
-                'delivery_advance_method' => $customer['delivery_advance_method'] ?? null,
-                'delivery_advance_txn_id' => $customer['delivery_advance_txn_id'] ?? null,
-                'delivery_advance_customer_confirmed' => true,
+                'delivery_charge' => 0,
+                'delivery_advance_paid' => null,
+                'delivery_advance_method' => null,
+                'delivery_advance_txn_id' => null,
+                'delivery_advance_customer_confirmed' => false,
                 'delivery_advance_admin_txn_id' => null,
                 'delivery_advance_admin_verified' => false,
                 'delivery_settlement_status' => 'pending',
@@ -115,6 +123,7 @@ class OrderController extends Controller
                     'price' => $item['price'],
                     'quantity' => $item['quantity'],
                     'sku' => $item['sku'],
+                    'size' => $item['size'] ?? null,
                 ]);
             }
 

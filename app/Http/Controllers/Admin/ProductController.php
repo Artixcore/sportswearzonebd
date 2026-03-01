@@ -53,8 +53,28 @@ class ProductController extends Controller
 
     public function create(): View
     {
-        $categories = Category::orderBy('name')->get();
-        return view('admin.products.create', compact('categories'));
+        $rootCategories = Category::whereNull('parent_id')->orderBy('sort_order')->orderBy('name')->get();
+        $subcategoriesByParentId = Category::whereNotNull('parent_id')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('parent_id')
+            ->map(fn ($group) => $group->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->values()->all())
+            ->toArray();
+        $selectedParentId = null;
+        $selectedSubcategoryId = null;
+        if (old('category_id')) {
+            $cat = Category::find(old('category_id'));
+            if ($cat) {
+                if ($cat->parent_id) {
+                    $selectedParentId = $cat->parent_id;
+                    $selectedSubcategoryId = $cat->id;
+                } else {
+                    $selectedParentId = $cat->id;
+                }
+            }
+        }
+        return view('admin.products.create', compact('rootCategories', 'subcategoriesByParentId', 'selectedParentId', 'selectedSubcategoryId'));
     }
 
     public function store(StoreProductRequest $request): RedirectResponse
@@ -112,9 +132,26 @@ class ProductController extends Controller
 
     public function edit(Product $product): View
     {
-        $product->load('images', 'variants');
-        $categories = Category::orderBy('name')->get();
-        return view('admin.products.edit', compact('product', 'categories'));
+        $product->load('images', 'variants', 'category.parent');
+        $rootCategories = Category::whereNull('parent_id')->orderBy('sort_order')->orderBy('name')->get();
+        $subcategoriesByParentId = Category::whereNotNull('parent_id')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('parent_id')
+            ->map(fn ($group) => $group->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->values()->all())
+            ->toArray();
+        $selectedParentId = null;
+        $selectedSubcategoryId = null;
+        if ($product->category_id && $product->category) {
+            if ($product->category->parent_id) {
+                $selectedParentId = $product->category->parent_id;
+                $selectedSubcategoryId = $product->category_id;
+            } else {
+                $selectedParentId = $product->category_id;
+            }
+        }
+        return view('admin.products.edit', compact('product', 'rootCategories', 'subcategoriesByParentId', 'selectedParentId', 'selectedSubcategoryId'));
     }
 
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse

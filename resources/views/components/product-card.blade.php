@@ -13,7 +13,11 @@
                 </div>
             @endif
             <span class="absolute left-2 top-2 rounded-md bg-base px-2 py-0.5 text-xs font-medium text-white">
-                {{ $product->category->name ?? 'Uncategorized' }}
+                @if($product->category)
+                    {{ $product->category->parent_id ? $product->category->parent->name . ' › ' . $product->category->name : $product->category->name }}
+                @else
+                    Uncategorized
+                @endif
             </span>
         </div>
     </a>
@@ -29,12 +33,14 @@
             <span class="ml-1 text-xs text-gray-500">4.0</span>
         </div>
         <div class="mt-2 flex items-center gap-2">
-            <span class="text-base font-bold text-gray-900">৳{{ number_format($product->price, 0) }}</span>
-            @if($product->compare_at_price && $product->compare_at_price > $product->price)
-                <span class="text-sm text-gray-500 line-through">৳{{ number_format($product->compare_at_price, 0) }}</span>
-                @if($product->discount_percent)
-                    <span class="rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">{{ $product->discount_percent }}% Off</span>
+            @if($product->has_discount)
+                <span class="text-sm text-gray-500 line-through">৳{{ number_format($product->original_price, 0) }}</span>
+                <span class="text-base font-bold text-gray-900">৳{{ number_format($product->final_price, 0) }}</span>
+                @if($product->discount_label)
+                    <span class="rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">{{ $product->discount_label }}</span>
                 @endif
+            @else
+                <span class="text-base font-bold text-gray-900">৳{{ number_format($product->final_price, 0) }}</span>
             @endif
         </div>
         <form action="{{ route('cart.add') }}" method="POST" class="mt-3">

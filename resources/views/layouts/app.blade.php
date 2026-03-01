@@ -5,12 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', config('app.name'))</title>
-    <meta name="description" content="@yield('meta_description', config('seo.default_description', ''))">
+    <title>@yield('title', \App\Models\Setting::get('seo_default_title', config('app.name')))</title>
+    <meta name="description" content="@yield('meta_description', \App\Models\Setting::get('seo_default_description', config('seo.default_description', '')))">
     <link rel="canonical" href="@yield('canonical', url()->current())">
 
     @stack('meta')
     @stack('json-ld')
+
+    @php
+        $gtmId = \App\Models\Setting::get('gtm_id');
+        $gaMeasurementId = \App\Models\Setting::get('ga_measurement_id');
+        $headerScripts = \App\Models\Setting::get('header_scripts');
+        $metaVerificationScripts = \App\Models\Setting::get('meta_verification_scripts');
+    @endphp
+    @if($gtmId)
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ $gtmId }}');</script>
+    @endif
+    @if($gaMeasurementId)
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaMeasurementId }}"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ $gaMeasurementId }}');</script>
+    @endif
+    @if($metaVerificationScripts){!! $metaVerificationScripts !!}@endif
+    @if($headerScripts){!! $headerScripts !!}@endif
 
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -82,6 +99,12 @@
 
     @include('partials.app-footer')
 
+    @php $footerScripts = \App\Models\Setting::get('footer_scripts'); @endphp
+    @if($footerScripts){!! $footerScripts !!}@endif
+    @php $gtmId = \App\Models\Setting::get('gtm_id'); @endphp
+    @if($gtmId)
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $gtmId }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    @endif
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script>
     (function() {

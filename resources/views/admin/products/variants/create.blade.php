@@ -16,8 +16,12 @@
     </div>
     <div class="grid grid-cols-2 gap-4">
         <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Size</label>
-            <input type="text" name="size" value="{{ old('size') }}" class="w-full rounded border-slate-300 shadow-sm">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Size *</label>
+            <select name="size" required class="w-full rounded border-slate-300 shadow-sm">
+                @foreach($product->allowedSizes as $s)
+                    <option value="{{ $s }}" {{ old('size') === $s ? 'selected' : '' }}>{{ $s }}</option>
+                @endforeach
+            </select>
         </div>
         <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Color</label>

@@ -29,7 +29,7 @@
                     @php
                         $subtotal = 0;
                         foreach ($cartItems as $item) {
-                            $subtotal += $item->product->price * $item->quantity;
+                            $subtotal += $item->product->final_price * $item->quantity;
                         }
                         $delivery = 0;
                         $total = $subtotal + $delivery;
@@ -61,24 +61,28 @@
 <script>
 (function() {
     var updateUrl = @json(route('cart.update'));
-    var removeUrlBase = @json(url('/cart/remove'));
+    var removeUrl = @json(route('cart.remove'));
     var clearUrl = @json(route('cart.clear'));
-    function removeUrlFor(id) { return removeUrlBase + '/' + id; }
     function formatMoney(n) { return '৳' + Math.round(n).toLocaleString(); }
     function updateSummary(cartTotal) {
         $('#cart-subtotal, #cart-total').text(formatMoney(cartTotal));
     }
+    function getPayload(btnOrRow) {
+        var row = btnOrRow instanceof $ ? btnOrRow.closest('.cart-item-row') : $(btnOrRow).closest('.cart-item-row');
+        return { product_id: row.data('product-id'), size: row.data('size') || '', _token: $('meta[name="csrf-token"]').attr('content') };
+    }
     $(function() {
         $(document).on('click', '.cart-qty-minus', function() {
             var btn = $(this);
-            var pid = btn.data('product-id');
             var row = btn.closest('.cart-item-row');
             var qtyEl = row.find('.cart-item-qty');
             var qty = parseInt(qtyEl.text(), 10) || 1;
             var newQty = Math.max(0, qty - 1);
             if (newQty === qty) return;
+            var payload = getPayload(btn);
+            payload.quantity = newQty;
             btn.prop('disabled', true);
-            $.post(updateUrl, { product_id: pid, quantity: newQty, _token: $('meta[name="csrf-token"]').attr('content') })
+            $.post(updateUrl, payload)
                 .done(function(res) {
                     if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
                     if (res.removed) {
@@ -101,13 +105,14 @@
         });
         $(document).on('click', '.cart-qty-plus', function() {
             var btn = $(this);
-            var pid = btn.data('product-id');
             var row = btn.closest('.cart-item-row');
             var qtyEl = row.find('.cart-item-qty');
             var qty = parseInt(qtyEl.text(), 10) || 0;
             var newQty = qty + 1;
+            var payload = getPayload(btn);
+            payload.quantity = newQty;
             btn.prop('disabled', true);
-            $.post(updateUrl, { product_id: pid, quantity: newQty, _token: $('meta[name="csrf-token"]').attr('content') })
+            $.post(updateUrl, payload)
                 .done(function(res) {
                     if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
                     qtyEl.text(newQty);
@@ -122,9 +127,10 @@
         $(document).on('click', '.cart-remove', function() {
             var btn = $(this);
             var pid = btn.data('product-id');
+            var size = btn.data('size') || '';
             var row = btn.closest('.cart-item-row');
             btn.prop('disabled', true);
-            $.post(removeUrlFor(pid), { _token: $('meta[name="csrf-token"]').attr('content') })
+            $.post(removeUrl, { product_id: pid, size: size, _token: $('meta[name="csrf-token"]').attr('content') })
                 .done(function(res) {
                     if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
                     row.remove();

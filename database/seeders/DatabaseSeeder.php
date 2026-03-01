@@ -27,13 +27,7 @@ class DatabaseSeeder extends Seeder
 
         $this->ensurePlaceholderImage();
 
-        $mens = Category::firstOrCreate(['slug' => 'mens'], ['name' => "Men's", 'sort_order' => 1]);
-        $tshirts = Category::firstOrCreate(['slug' => 'mens-tshirts'], ['name' => "Men's T-Shirts", 'parent_id' => $mens->id, 'sort_order' => 1]);
-        $pants = Category::firstOrCreate(['slug' => 'mens-pants'], ['name' => "Men's Pants", 'parent_id' => $mens->id, 'sort_order' => 2]);
-        $jackets = Category::firstOrCreate(['slug' => 'mens-jackets'], ['name' => "Men's Jackets", 'parent_id' => $mens->id, 'sort_order' => 3]);
-        $shorts = Category::firstOrCreate(['slug' => 'mens-shorts'], ['name' => "Men's Shorts", 'parent_id' => $mens->id, 'sort_order' => 4]);
-        $women = Category::firstOrCreate(['slug' => 'womens'], ['name' => "Women's", 'sort_order' => 2]);
-        $kids = Category::firstOrCreate(['slug' => 'kids'], ['name' => "Kids", 'sort_order' => 3]);
+        $this->call(CategorySeeder::class);
     }
 
     private function ensurePlaceholderImage(): void

@@ -24,12 +24,34 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
-                <select name="category_id" class="w-full rounded border-slate-300 shadow-sm">
-                    <option value="">— None —</option>
-                    @foreach($categories as $c)
-                        <option value="{{ $c->id }}" {{ old('category_id', $product->category_id) == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
-                    @endforeach
+                <div class="space-y-2">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-0.5">Parent category</label>
+                        <select id="parent_category_id" class="w-full rounded border-slate-300 shadow-sm">
+                            <option value="">— None —</option>
+                            @foreach($rootCategories as $c)
+                                <option value="{{ $c->id }}" {{ $selectedParentId == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-0.5">Subcategory</label>
+                        <select id="subcategory_id" class="w-full rounded border-slate-300 shadow-sm">
+                            <option value="">— None —</option>
+                        </select>
+                    </div>
+                    <input type="hidden" name="category_id" id="category_id" value="{{ old('category_id', $product->category_id) }}">
+                </div>
+                @error('category_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Size type</label>
+                <select name="size_type" class="w-full rounded border-slate-300 shadow-sm">
+                    <option value="standard" {{ old('size_type', $product->size_type ?? 'standard') === 'standard' ? 'selected' : '' }}>Standard (S, M, L, XL, XXL)</option>
+                    <option value="numeric_panjabi" {{ old('size_type', $product->size_type) === 'numeric_panjabi' ? 'selected' : '' }}>Panjabi (40, 42, 44)</option>
                 </select>
+                <p class="text-xs text-slate-500 mt-0.5">Determines which sizes are available for this product and its variants.</p>
+                @error('size_type')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Short Description</label>
@@ -122,6 +144,28 @@
             </div>
         </div>
     </div>
+    <div class="mt-6 border-t border-slate-200 pt-6">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">SEO (optional)</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="lg:col-span-2">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Meta title</label>
+                <input type="text" name="meta_title" value="{{ old('meta_title', $product->meta_title) }}" maxlength="60" placeholder="Recommended max 60 characters" class="w-full rounded border-slate-300 shadow-sm">
+                <p class="text-xs text-slate-500 mt-0.5">Recommended max 60 characters for search results.</p>
+                @error('meta_title')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div class="lg:col-span-2">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Meta description</label>
+                <textarea name="meta_description" rows="2" maxlength="160" placeholder="Recommended max 160 characters" class="w-full rounded border-slate-300 shadow-sm">{{ old('meta_description', $product->meta_description) }}</textarea>
+                <p class="text-xs text-slate-500 mt-0.5">Recommended max 160 characters.</p>
+                @error('meta_description')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div class="lg:col-span-2">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Meta keywords</label>
+                <input type="text" name="meta_keywords" value="{{ old('meta_keywords', $product->meta_keywords) }}" placeholder="Comma-separated keywords" class="w-full rounded border-slate-300 shadow-sm">
+                @error('meta_keywords')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+            </div>
+        </div>
+    </div>
     <div class="flex gap-3">
         <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700">Update Product</button>
         <a href="{{ route('admin.products.index') }}" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300">Cancel</a>
@@ -130,6 +174,43 @@
 @push('scripts')
 <script>
 (function() {
+    var subcategoriesByParentId = @json($subcategoriesByParentId);
+    var selectedSubcategoryId = @json($selectedSubcategoryId);
+    var parentSelect = document.getElementById('parent_category_id');
+    var subcategorySelect = document.getElementById('subcategory_id');
+    var categoryHidden = document.getElementById('category_id');
+
+    function fillSubcategories(parentId) {
+        subcategorySelect.innerHTML = '<option value="">— None —</option>';
+        if (parentId && subcategoriesByParentId[parentId]) {
+            subcategoriesByParentId[parentId].forEach(function(sub) {
+                var opt = document.createElement('option');
+                opt.value = sub.id;
+                opt.textContent = sub.name;
+                if (selectedSubcategoryId && sub.id == selectedSubcategoryId) opt.selected = true;
+                subcategorySelect.appendChild(opt);
+            });
+        }
+        syncCategoryId();
+    }
+
+    function syncCategoryId() {
+        var subVal = subcategorySelect.value;
+        var parentVal = parentSelect.value;
+        categoryHidden.value = subVal || parentVal || '';
+    }
+
+    if (parentSelect) {
+        fillSubcategories(parentSelect.value);
+        parentSelect.addEventListener('change', function() {
+            selectedSubcategoryId = null;
+            fillSubcategories(this.value);
+        });
+    }
+    if (subcategorySelect) {
+        subcategorySelect.addEventListener('change', syncCategoryId);
+    }
+
     var deleteImageUrlBase = {{ json_encode(route('admin.products.images.destroy', [$product, 0])) }};
     var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 

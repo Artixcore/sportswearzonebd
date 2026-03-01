@@ -48,36 +48,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         <input type="email" id="email" name="email" value="{{ old('email', auth()->user()?->email) }}" autocomplete="email" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
                         <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="email"></p>
                     </div>
-
-                    @php $deliveryAdvanceAmount = config('checkout.delivery_advance_amount', 150); @endphp
-                    <div class="mt-8 border-t border-gray-200 pt-6">
-                        <h2 class="text-lg font-semibold text-gray-900">Delivery Charge Advance (৳{{ number_format($deliveryAdvanceAmount, 0) }})</h2>
-                        <p class="mt-1 text-sm text-gray-600">This is required to confirm your order.</p>
-                        <input type="hidden" name="delivery_charge" value="{{ $deliveryAdvanceAmount }}">
-                        <div class="mt-4 space-y-4">
-                            <div>
-                                <label for="delivery_advance_method" class="block text-sm font-medium text-gray-700">Payment method <span class="text-red-500">*</span></label>
-                                <select id="delivery_advance_method" name="delivery_advance_method" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
-                                    <option value="">Select method</option>
-                                    <option value="bKash" {{ old('delivery_advance_method') === 'bKash' ? 'selected' : '' }}>bKash</option>
-                                    <option value="Nagad" {{ old('delivery_advance_method') === 'Nagad' ? 'selected' : '' }}>Nagad</option>
-                                    <option value="Rocket" {{ old('delivery_advance_method') === 'Rocket' ? 'selected' : '' }}>Rocket</option>
-                                    <option value="Cash" {{ old('delivery_advance_method') === 'Cash' ? 'selected' : '' }}>Cash</option>
-                                </select>
-                                <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="delivery_advance_method"></p>
-                            </div>
-                            <div>
-                                <label for="delivery_advance_txn_id" class="block text-sm font-medium text-gray-700">Transaction ID</label>
-                                <input type="text" id="delivery_advance_txn_id" name="delivery_advance_txn_id" value="{{ old('delivery_advance_txn_id') }}" placeholder="Optional: Transaction ID (if available)" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
-                                <p class="checkout-error mt-1 text-sm text-red-600 hidden" data-for="delivery_advance_txn_id"></p>
-                            </div>
-                            <div class="flex items-start">
-                                <input type="checkbox" id="delivery_advance_confirmed" name="delivery_advance_confirmed" value="1" {{ old('delivery_advance_confirmed') ? 'checked' : '' }} class="mt-1 h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent">
-                                <label for="delivery_advance_confirmed" class="ml-2 block text-sm font-medium text-gray-700">I have paid ৳{{ number_format($deliveryAdvanceAmount, 0) }} delivery charge advance <span class="text-red-500">*</span></label>
-                            </div>
-                            <p class="checkout-error text-sm text-red-600 hidden" data-for="delivery_advance_confirmed"></p>
-                        </div>
-                    </div>
                 </div>
                 <div class="mt-8">
                     <button type="submit" id="checkout-submit-btn" class="w-full rounded-lg bg-accent px-6 py-3 font-medium text-white hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 sm:w-auto sm:min-w-[200px]">Continue to Confirm Order</button>
@@ -91,8 +61,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <ul class="mt-4 divide-y divide-gray-200">
                     @foreach($cartItems as $item)
                         <li class="flex justify-between py-3 text-sm">
-                            <span class="text-gray-700">{{ $item->product->name }} × {{ $item->quantity }}</span>
-                            <span class="font-medium text-gray-900">৳{{ number_format($item->product->price * $item->quantity, 0) }}</span>
+                            <span class="text-gray-700">{{ $item->product->name }} @if(!empty($item->size))<span class="text-gray-500">(Size: {{ $item->size }})</span>@endif × {{ $item->quantity }}</span>
+                            <span class="font-medium text-gray-900">৳{{ number_format($item->product->final_price * $item->quantity, 0) }}</span>
                         </li>
                     @endforeach
                 </ul>

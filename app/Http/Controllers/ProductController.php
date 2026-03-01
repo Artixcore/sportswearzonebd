@@ -9,7 +9,7 @@ class ProductController extends Controller
 {
     public function show(string $slug): View
     {
-        $product = Product::where('slug', $slug)->where('is_active', true)->with(['images', 'category'])->firstOrFail();
+        $product = Product::where('slug', $slug)->where('is_active', true)->with(['images', 'category.parent'])->firstOrFail();
         $related = Product::where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->where('is_active', true)
@@ -30,6 +30,7 @@ class ProductController extends Controller
             ['name' => $product->name],
         ]);
 
-        return view('products.show', compact('product', 'related', 'viewContentEventId', 'breadcrumbJsonLd'));
+        $allowedSizes = $product->allowedSizes;
+        return view('products.show', compact('product', 'related', 'viewContentEventId', 'breadcrumbJsonLd', 'allowedSizes'));
     }
 }
