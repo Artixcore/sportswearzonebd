@@ -225,14 +225,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 dataType: 'json'
             }).done(function(res) {
                 if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
-                if (typeof showToast === 'function') showToast(res.message || 'Added to cart.', 'success');
+                if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Added to cart', text: res.message || 'Added to cart.' });
             }).fail(function(xhr) {
                 var msg = 'Could not add to cart.';
                 if (xhr.responseJSON && xhr.responseJSON.errors) {
                     var first = Object.values(xhr.responseJSON.errors)[0];
                     if (Array.isArray(first)) msg = first[0];
                 } else if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-                if (typeof showToast === 'function') showToast(msg, 'error');
+                if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: msg });
             }).always(function() {
                 btn.prop('disabled', false).removeClass('opacity-75');
             });
@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     var first = Object.values(xhr.responseJSON.errors)[0];
                     if (Array.isArray(first)) msg = first[0];
                 } else if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-                if (typeof showToast === 'function') showToast(msg, 'error');
+                if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: msg });
                 btn.prop('disabled', false).removeClass('opacity-75');
             });
         });

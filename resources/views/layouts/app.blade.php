@@ -33,7 +33,6 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @else
         <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             tailwind.config = {
                 theme: {
@@ -50,26 +49,6 @@
                     }
                 }
             };
-            window.showAlert = function(type, title, text, options) {
-                var opts = Object.assign({ title: title || '', text: text || '' }, options || {});
-                if (type === 'success') opts.icon = 'success';
-                else if (type === 'error') opts.icon = 'error';
-                else if (type === 'warning') opts.icon = 'warning';
-                return Swal.fire(opts);
-            };
-            window.showConfirm = function(title, text, onConfirm, options) {
-                return Swal.fire(Object.assign({
-                    title: title || 'Are you sure?',
-                    text: text || '',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#059669',
-                    cancelButtonColor: '#6b7280'
-                }, options || {})).then(function(result) {
-                    if (result.isConfirmed && typeof onConfirm === 'function') onConfirm();
-                    return result;
-                });
-            };
         </script>
     @endif
 </head>
@@ -77,21 +56,6 @@
     @include('partials.app-nav')
 
     <main class="flex-grow">
-        @if(session('success'))
-            <div class="bg-accent text-surface px-4 py-3 text-center text-sm font-medium" role="alert">
-                {{ session('success') }}
-            </div>
-        @endif
-        @if(session('error'))
-            <div class="bg-red-600 text-white px-4 py-3 text-center text-sm font-medium" role="alert">
-                {{ session('error') }}
-            </div>
-        @endif
-        @if(session('info'))
-            <div class="bg-blue-600 text-white px-4 py-3 text-center text-sm font-medium" role="alert">
-                {{ session('info') }}
-            </div>
-        @endif
         @yield('content')
     </main>
 
@@ -106,6 +70,7 @@
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $gtmId }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
     (function() {
         var token = document.querySelector('meta[name="csrf-token"]');
@@ -117,6 +82,7 @@
                 }
             });
         }
+        window.cartAddUrl = @json(route('cart.add'));
         window.updateNavCartCount = function(count) {
             var n = parseInt(count, 10) || 0;
             var text = n > 99 ? '99+' : String(n);
@@ -125,18 +91,75 @@
                 el.style.display = n > 0 ? '' : 'none';
             });
         };
+        window.showAlert = function(type, title, text, options) {
+            var opts = Object.assign({ title: title || '', text: text || '' }, options || {});
+            if (type === 'success') opts.icon = 'success';
+            else if (type === 'error') opts.icon = 'error';
+            else if (type === 'warning') opts.icon = 'warning';
+            return typeof Swal !== 'undefined' ? Swal.fire(opts) : Promise.resolve();
+        };
+        window.showConfirm = function(title, text, onConfirm, options) {
+            return (typeof Swal !== 'undefined' ? Swal.fire(Object.assign({
+                title: title || 'Are you sure?',
+                text: text || '',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#6b7280'
+            }, options || {})) : Promise.resolve({ isConfirmed: false })).then(function(result) {
+                if (result.isConfirmed && typeof onConfirm === 'function') onConfirm();
+                return result;
+            });
+        };
         window.showToast = function(message, type) {
             type = type || 'success';
-            var container = document.getElementById('toast-container');
-            if (!container) return;
-            var el = document.createElement('div');
-            el.className = 'rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ' + (type === 'error' ? 'bg-red-600' : 'bg-accent');
-            el.textContent = message;
-            container.appendChild(el);
-            setTimeout(function() {
-                if (el.parentNode) el.parentNode.removeChild(el);
-            }, 4000);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: type === 'error' ? 'error' : 'success',
+                    title: message,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            }
         };
+        $(function() {
+            @if(session('success'))
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Success', text: @json(session('success')), timer: 2500, showConfirmButton: false });
+            @endif
+            @if(session('error'))
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: @json(session('error')) });
+            @endif
+            @if(session('info'))
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'info', title: 'Info', text: @json(session('info')), timer: 2500, showConfirmButton: false });
+            @endif
+            $(document).on('submit', '.add-to-cart-form', function(e) {
+                e.preventDefault();
+                var form = $(this);
+                var btn = form.find('button[type="submit"]');
+                btn.prop('disabled', true).addClass('opacity-75');
+                $.ajax({
+                    url: window.cartAddUrl || form.attr('action'),
+                    method: 'POST',
+                    data: form.serialize(),
+                    dataType: 'json'
+                }).done(function(res) {
+                    if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
+                    if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Added to cart', text: res.message || 'Item added to your cart.' });
+                }).fail(function(xhr) {
+                    var msg = 'Could not add to cart.';
+                    if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        var first = Object.values(xhr.responseJSON.errors)[0];
+                        if (Array.isArray(first)) msg = first[0];
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                    if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: msg });
+                }).always(function() {
+                    btn.prop('disabled', false).removeClass('opacity-75');
+                });
+            });
+        });
     })();
     </script>
     @stack('scripts')

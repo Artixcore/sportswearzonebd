@@ -99,7 +99,7 @@
                     updateSummary(res.cart_total);
                 })
                 .fail(function() {
-                    if (typeof showToast === 'function') showToast('Could not update quantity.', 'error');
+                    if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: 'Could not update quantity.' });
                 })
                 .always(function() { btn.prop('disabled', false); });
         });
@@ -120,7 +120,7 @@
                     updateSummary(res.cart_total);
                 })
                 .fail(function() {
-                    if (typeof showToast === 'function') showToast('Could not update quantity.', 'error');
+                    if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: 'Could not update quantity.' });
                 })
                 .always(function() { btn.prop('disabled', false); });
         });
@@ -139,33 +139,24 @@
                         $('#cart-empty-state').show();
                     }
                     updateSummary(res.cart_total);
-                    if (typeof showToast === 'function') showToast('Item removed.', 'success');
+                    if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Removed', text: 'Item removed from cart.', timer: 2000, showConfirmButton: false });
                 })
                 .fail(function() {
-                    if (typeof showToast === 'function') showToast('Could not remove item.', 'error');
+                    if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: 'Could not remove item.' });
                     btn.prop('disabled', false);
                 });
         });
         $('#cart-clear-btn').on('click', function() {
             var btn = $(this);
-            if (typeof showConfirm === 'function') {
-                showConfirm('Clear cart', 'Clear all items from cart?', function() {
-                    btn.prop('disabled', true);
-                    $.post(clearUrl, { _token: $('meta[name="csrf-token"]').attr('content') })
-                        .done(function(res) {
-                            if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
-                            $('#cart-items-container').empty();
-                            $('#cart-has-items').hide();
-                            $('#cart-empty-state').show();
-                            if (typeof showToast === 'function') showToast('Cart cleared.', 'success');
-                        })
-                        .fail(function() {
-                            if (typeof showToast === 'function') showToast('Could not clear cart.', 'error');
-                        })
-                        .always(function() { btn.prop('disabled', false); });
-                });
-            } else {
-                if (!confirm('Clear all items from cart?')) return;
+            (typeof showConfirm === 'function' ? showConfirm('Clear cart', 'Clear all items from cart?', doClear) : Swal.fire({
+                title: 'Clear cart',
+                text: 'Clear all items from cart?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#6b7280'
+            }).then(function(r) { if (r.isConfirmed) doClear(); }));
+            function doClear() {
                 btn.prop('disabled', true);
                 $.post(clearUrl, { _token: $('meta[name="csrf-token"]').attr('content') })
                     .done(function(res) {
@@ -173,10 +164,10 @@
                         $('#cart-items-container').empty();
                         $('#cart-has-items').hide();
                         $('#cart-empty-state').show();
-                        if (typeof showToast === 'function') showToast('Cart cleared.', 'success');
+                        if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Cart cleared', text: 'All items removed.', timer: 2000, showConfirmButton: false });
                     })
                     .fail(function() {
-                        if (typeof showToast === 'function') showToast('Could not clear cart.', 'error');
+                        if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Error', text: 'Could not clear cart.' });
                     })
                     .always(function() { btn.prop('disabled', false); });
             }

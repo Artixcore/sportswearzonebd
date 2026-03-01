@@ -43,9 +43,10 @@
                 <span class="text-base font-bold text-gray-900">৳{{ number_format($product->final_price, 0) }}</span>
             @endif
         </div>
-        <form action="{{ route('cart.add') }}" method="POST" class="mt-3">
+        <form action="{{ route('cart.add') }}" method="POST" class="add-to-cart-form mt-3">
             @csrf
             <input type="hidden" name="product_id" value="{{ $product->id }}">
+            <input type="hidden" name="size" value="{{ collect($product->allowedSizes)->first() ?? 'M' }}">
             <input type="hidden" name="quantity" value="1">
             <button type="submit" class="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
                 Add to cart
