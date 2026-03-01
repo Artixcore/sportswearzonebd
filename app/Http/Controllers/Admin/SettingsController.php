@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Models\ActivityLog;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -23,20 +23,14 @@ class SettingsController extends Controller
         return view('admin.settings.index', compact('settings'));
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(UpdateSettingsRequest $request): RedirectResponse
     {
-        $request->validate([
-            'site_name' => 'nullable|string|max:255',
-            'meta_pixel_id' => 'nullable|string|max:50',
-            'meta_access_token' => 'nullable|string',
-            'seo_default_title' => 'nullable|string|max:255',
-            'seo_default_description' => 'nullable|string',
-        ]);
-        Setting::set('site_name', $request->site_name);
-        Setting::set('meta_pixel_id', $request->meta_pixel_id);
-        Setting::set('meta_access_token', $request->meta_access_token);
-        Setting::set('seo_default_title', $request->seo_default_title);
-        Setting::set('seo_default_description', $request->seo_default_description);
+        $validated = $request->validated();
+        Setting::set('site_name', $validated['site_name'] ?? null);
+        Setting::set('meta_pixel_id', $validated['meta_pixel_id'] ?? null);
+        Setting::set('meta_access_token', $validated['meta_access_token'] ?? null);
+        Setting::set('seo_default_title', $validated['seo_default_title'] ?? null);
+        Setting::set('seo_default_description', $validated['seo_default_description'] ?? null);
         ActivityLog::log('settings.updated', 'Settings updated.');
         return redirect()->route('admin.settings.index')->with('success', 'Settings saved.');
     }

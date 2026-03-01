@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddToCartRequest;
+use App\Http\Requests\UpdateCartRequest;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -25,22 +27,11 @@ class CartController extends Controller
         return view('cart.index', compact('cartItems'));
     }
 
-    public function add(Request $request): JsonResponse|RedirectResponse
+    public function add(AddToCartRequest $request): JsonResponse|RedirectResponse
     {
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'nullable|integer|min:1',
-        ]);
-
-        if ($validator->fails()) {
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
-            }
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $id = (int) $request->product_id;
-        $qty = (int) ($request->quantity ?? 1);
+        $validated = $request->validated();
+        $id = (int) $validated['product_id'];
+        $qty = (int) ($validated['quantity'] ?? 1);
         $cart = session('cart', []);
         $cart[$id] = ($cart[$id] ?? 0) + $qty;
         session(['cart' => $cart]);
@@ -72,23 +63,12 @@ class CartController extends Controller
         return redirect()->back()->with('success', 'Added to cart.');
     }
 
-    public function update(Request $request): JsonResponse|RedirectResponse
+    public function update(UpdateCartRequest $request): JsonResponse|RedirectResponse
     {
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:0',
-        ]);
-
-        if ($validator->fails()) {
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
-            }
-            return redirect()->route('cart.index')->withErrors($validator);
-        }
-
+        $validated = $request->validated();
         $cart = session('cart', []);
-        $id = (int) $request->product_id;
-        $qty = (int) $request->quantity;
+        $id = (int) $validated['product_id'];
+        $qty = (int) $validated['quantity'];
         $product = Product::find($id);
         $removed = false;
 

@@ -5,7 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin') - {{ config('app.name') }}</title>
-    @vite(['resources/css/admin.css'])
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/css/admin.css'])
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            window.showAlert = function(type, title, text, options) {
+                var opts = Object.assign({ title: title || '', text: text || '' }, options || {});
+                if (type === 'success') opts.icon = 'success';
+                else if (type === 'error') opts.icon = 'error';
+                else if (type === 'warning') opts.icon = 'warning';
+                return Swal.fire(opts);
+            };
+            window.showConfirm = function(title, text, onConfirm, options) {
+                return Swal.fire(Object.assign({
+                    title: title || 'Are you sure?',
+                    text: text || '',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#6b7280'
+                }, options || {})).then(function(result) {
+                    if (result.isConfirmed && typeof onConfirm === 'function') onConfirm();
+                    return result;
+                });
+            };
+        </script>
+    @else
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            accent: '#059669',
+                            'accent-hover': '#047857'
+                        }
+                    }
+                }
+            };
+            window.showAlert = function(type, title, text, options) {
+                var opts = Object.assign({ title: title || '', text: text || '' }, options || {});
+                if (type === 'success') opts.icon = 'success';
+                else if (type === 'error') opts.icon = 'error';
+                else if (type === 'warning') opts.icon = 'warning';
+                return Swal.fire(opts);
+            };
+            window.showConfirm = function(title, text, onConfirm, options) {
+                return Swal.fire(Object.assign({
+                    title: title || 'Are you sure?',
+                    text: text || '',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#6b7280'
+                }, options || {})).then(function(result) {
+                    if (result.isConfirmed && typeof onConfirm === 'function') onConfirm();
+                    return result;
+                });
+            };
+        </script>
+    @endif
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased">
     <div class="flex min-h-screen">

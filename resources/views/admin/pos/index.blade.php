@@ -125,7 +125,11 @@ document.getElementById('pos-search').addEventListener('input', function() {
 });
 
 document.getElementById('pos-checkout').addEventListener('click', function() {
-    if (cart.length === 0) { alert('Cart is empty.'); return; }
+    if (cart.length === 0) {
+        if (typeof showAlert === 'function') showAlert('warning', 'Cart is empty', 'Add products before completing the sale.');
+        else alert('Cart is empty.');
+        return;
+    }
     const btn = this;
     btn.disabled = true;
     const items = cart.map(i => ({
@@ -150,9 +154,15 @@ document.getElementById('pos-checkout').addEventListener('click', function() {
     .then(r => r.json())
     .then(data => {
         if (data.redirect) window.location.href = data.redirect;
-        else alert(data.message || 'Error');
+        else {
+            if (typeof showAlert === 'function') showAlert('error', 'Error', data.message || 'Something went wrong.');
+            else alert(data.message || 'Error');
+        }
     })
-    .catch(() => alert('Error'))
+    .catch(() => {
+        if (typeof showAlert === 'function') showAlert('error', 'Error', 'Network or server error. Please try again.');
+        else alert('Error');
+    })
     .finally(() => { btn.disabled = false; });
 });
 </script>

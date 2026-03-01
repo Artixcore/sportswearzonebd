@@ -19,10 +19,13 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
         ]);
 
-        User::firstOrCreate(
+        $admin = User::firstOrCreate(
             ['email' => 'admin@example.com'],
             ['name' => 'Admin', 'password' => Hash::make('password'), 'email_verified_at' => now(), 'remember_token' => Str::random(10), 'is_admin' => true]
         );
+        if (! $admin->hasAnyRole(['ceo', 'cto'])) {
+            $admin->assignRole('ceo');
+        }
 
         $this->ensurePlaceholderImage();
 

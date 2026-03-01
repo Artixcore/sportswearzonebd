@@ -6,7 +6,9 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class MetaConversionsApiService
 {
@@ -32,27 +34,32 @@ class MetaConversionsApiService
             return false;
         }
 
-        $payload = [
-            'data' => [
-                [
-                    'event_name' => $eventName,
-                    'event_time' => time(),
-                    'event_id' => $eventId,
-                    'event_source_url' => url()->current(),
-                    'action_source' => 'website',
-                    'user_data' => $this->hashUserData($userData),
-                    'custom_data' => $customData,
+        try {
+            $payload = [
+                'data' => [
+                    [
+                        'event_name' => $eventName,
+                        'event_time' => time(),
+                        'event_id' => $eventId,
+                        'event_source_url' => url()->current(),
+                        'action_source' => 'website',
+                        'user_data' => $this->hashUserData($userData),
+                        'custom_data' => $customData,
+                    ],
                 ],
-            ],
-            'access_token' => $this->accessToken,
-        ];
+                'access_token' => $this->accessToken,
+            ];
 
-        if ($this->testCode) {
-            $payload['test_event_code'] = $this->testCode;
+            if ($this->testCode) {
+                $payload['test_event_code'] = $this->testCode;
+            }
+
+            $response = Http::post("https://graph.facebook.com/v18.0/{$this->pixelId}/events", $payload);
+            return $response->successful();
+        } catch (Throwable $e) {
+            Log::warning('Meta Conversions API sendEvent failed', ['event' => $eventName, 'message' => $e->getMessage()]);
+            return false;
         }
-
-        $response = Http::post("https://graph.facebook.com/v18.0/{$this->pixelId}/events", $payload);
-        return $response->successful();
     }
 
     public function sendViewContent(Product $product, string $eventId): bool

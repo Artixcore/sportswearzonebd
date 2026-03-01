@@ -16,6 +16,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @else
         <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             tailwind.config = {
                 theme: {
@@ -31,7 +32,27 @@
                         }
                     }
                 }
-            }
+            };
+            window.showAlert = function(type, title, text, options) {
+                var opts = Object.assign({ title: title || '', text: text || '' }, options || {});
+                if (type === 'success') opts.icon = 'success';
+                else if (type === 'error') opts.icon = 'error';
+                else if (type === 'warning') opts.icon = 'warning';
+                return Swal.fire(opts);
+            };
+            window.showConfirm = function(title, text, onConfirm, options) {
+                return Swal.fire(Object.assign({
+                    title: title || 'Are you sure?',
+                    text: text || '',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#6b7280'
+                }, options || {})).then(function(result) {
+                    if (result.isConfirmed && typeof onConfirm === 'function') onConfirm();
+                    return result;
+                });
+            };
         </script>
     @endif
 </head>

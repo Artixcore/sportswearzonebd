@@ -8,8 +8,10 @@ use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Throwable;
 
 class OrderController extends Controller
 {
@@ -35,12 +37,17 @@ class OrderController extends Controller
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
         $subtotal = 0;
         $items = [];
+        $insufficient = [];
         foreach ($cart as $id => $qty) {
             if (! $products->has($id)) {
                 continue;
             }
             $p = $products[$id];
             $qty = (int) $qty;
+            $available = (int) ($p->stock ?? 0);
+            if ($available < $qty) {
+                $insufficient[] = $p->name . ($available > 0 ? ' (available: ' . $available . ')' : ' (out of stock)');
+            }
             $subtotal += $p->price * $qty;
             $items[] = [
                 'product_id' => $p->id,
@@ -51,65 +58,87 @@ class OrderController extends Controller
             ];
         }
 
+        if (! empty($insufficient)) {
+            $message = 'Insufficient stock: ' . implode(', ', $insufficient);
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => $message], 422);
+            }
+            return redirect()->back()->with('error', $message);
+        }
+
         $shipping = 0;
         $tax = 0;
         $total = $subtotal + $shipping + $tax;
         $purchaseEventId = Str::uuid()->toString();
 
-        $order = Order::create([
-            'user_id' => auth()->id(),
-            'guest_email' => $customer['email'] ?? null,
-            'status' => 'pending',
-            'subtotal' => $subtotal,
-            'tax' => $tax,
-            'shipping' => $shipping,
-            'total' => $total,
-            'currency' => 'BDT',
-            'payment_method' => 'cod',
-            'source' => 'online',
-            'meta' => [
-                'utm_source' => $request->get('utm_source'),
-                'utm_medium' => $request->get('utm_medium'),
-                'utm_campaign' => $request->get('utm_campaign'),
-                'event_id' => $purchaseEventId,
-            ],
-            'shipping_name' => $customer['name'],
-            'shipping_phone' => $customer['phone'],
-            'shipping_city' => $customer['city'],
-            'shipping_address' => $customer['address'],
-            'billing_name' => $customer['name'],
-            'billing_phone' => $customer['phone'],
-            'billing_address' => $customer['address'],
-        ]);
-
-        foreach ($items as $item) {
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $item['product_id'],
-                'name' => $item['name'],
-                'price' => $item['price'],
-                'quantity' => $item['quantity'],
-                'sku' => $item['sku'],
+        try {
+            $order = Order::create([
+                'user_id' => auth()->id(),
+                'guest_email' => $customer['email'] ?? null,
+                'status' => 'pending',
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'shipping' => $shipping,
+                'total' => $total,
+                'currency' => 'BDT',
+                'payment_method' => 'cod',
+                'source' => 'online',
+                'meta' => [
+                    'utm_source' => $request->get('utm_source'),
+                    'utm_medium' => $request->get('utm_medium'),
+                    'utm_campaign' => $request->get('utm_campaign'),
+                    'event_id' => $purchaseEventId,
+                ],
+                'shipping_name' => $customer['name'],
+                'shipping_phone' => $customer['phone'],
+                'shipping_city' => $customer['city'],
+                'shipping_address' => $customer['address'],
+                'billing_name' => $customer['name'],
+                'billing_phone' => $customer['phone'],
+                'billing_address' => $customer['address'],
             ]);
+
+            foreach ($items as $item) {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $item['product_id'],
+                    'name' => $item['name'],
+                    'price' => $item['price'],
+                    'quantity' => $item['quantity'],
+                    'sku' => $item['sku'],
+                ]);
+            }
+
+            session()->forget('cart');
+            session()->forget('checkout_customer');
+            session()->flash('last_order_id', $order->id);
+
+            $capi = app(\App\Services\MetaConversionsApiService::class);
+            if ($capi->isConfigured()) {
+                try {
+                    $capi->sendPurchase($order, $purchaseEventId);
+                } catch (Throwable $e) {
+                    Log::warning('Meta Conversions API sendPurchase failed', ['order_id' => $order->id, 'message' => $e->getMessage()]);
+                }
+            }
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => 'success',
+                    'redirect' => route('orders.success'),
+                ]);
+            }
+
+            return redirect()->route('orders.success')->with('success', 'Order placed successfully.');
+        } catch (Throwable $e) {
+            Log::error('Order creation failed', ['exception' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => 'Unable to place order. Please try again.'], 500);
+            }
+
+            return redirect()->back()->with('error', 'Unable to place order. Please try again.');
         }
-
-        session()->forget('cart');
-        session()->forget('checkout_customer');
-        session()->flash('last_order_id', $order->id);
-
-        $capi = app(\App\Services\MetaConversionsApiService::class);
-        if ($capi->isConfigured()) {
-            $capi->sendPurchase($order, $purchaseEventId);
-        }
-
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json([
-                'status' => 'success',
-                'redirect' => route('orders.success'),
-            ]);
-        }
-
-        return redirect()->route('orders.success')->with('success', 'Order placed successfully.');
     }
 
     public function success(): View|RedirectResponse

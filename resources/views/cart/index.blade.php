@@ -141,21 +141,39 @@
                 });
         });
         $('#cart-clear-btn').on('click', function() {
-            if (!confirm('Clear all items from cart?')) return;
             var btn = $(this);
-            btn.prop('disabled', true);
-            $.post(clearUrl, { _token: $('meta[name="csrf-token"]').attr('content') })
-                .done(function(res) {
-                    if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
-                    $('#cart-items-container').empty();
-                    $('#cart-has-items').hide();
-                    $('#cart-empty-state').show();
-                    if (typeof showToast === 'function') showToast('Cart cleared.', 'success');
-                })
-                .fail(function() {
-                    if (typeof showToast === 'function') showToast('Could not clear cart.', 'error');
-                })
-                .always(function() { btn.prop('disabled', false); });
+            if (typeof showConfirm === 'function') {
+                showConfirm('Clear cart', 'Clear all items from cart?', function() {
+                    btn.prop('disabled', true);
+                    $.post(clearUrl, { _token: $('meta[name="csrf-token"]').attr('content') })
+                        .done(function(res) {
+                            if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
+                            $('#cart-items-container').empty();
+                            $('#cart-has-items').hide();
+                            $('#cart-empty-state').show();
+                            if (typeof showToast === 'function') showToast('Cart cleared.', 'success');
+                        })
+                        .fail(function() {
+                            if (typeof showToast === 'function') showToast('Could not clear cart.', 'error');
+                        })
+                        .always(function() { btn.prop('disabled', false); });
+                });
+            } else {
+                if (!confirm('Clear all items from cart?')) return;
+                btn.prop('disabled', true);
+                $.post(clearUrl, { _token: $('meta[name="csrf-token"]').attr('content') })
+                    .done(function(res) {
+                        if (typeof updateNavCartCount === 'function') updateNavCartCount(res.cart_count);
+                        $('#cart-items-container').empty();
+                        $('#cart-has-items').hide();
+                        $('#cart-empty-state').show();
+                        if (typeof showToast === 'function') showToast('Cart cleared.', 'success');
+                    })
+                    .fail(function() {
+                        if (typeof showToast === 'function') showToast('Could not clear cart.', 'error');
+                    })
+                    .always(function() { btn.prop('disabled', false); });
+            }
         });
     });
 })();

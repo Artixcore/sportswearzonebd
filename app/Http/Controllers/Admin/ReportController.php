@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Sale;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class ReportController extends Controller
 {
@@ -63,7 +66,7 @@ class ReportController extends Controller
         ));
     }
 
-    public function exportCsv(Request $request): StreamedResponse
+    public function exportCsv(Request $request): StreamedResponse|RedirectResponse
     {
         $start = $request->get('date_from', now()->startOfMonth()->toDateString());
         $end = $request->get('date_to', now()->toDateString());
@@ -73,22 +76,31 @@ class ReportController extends Controller
             'Content-Disposition' => 'attachment; filename="sales-report-' . $start . '-to-' . $end . '.csv"',
         ];
 
-        return response()->stream(function () use ($start, $end) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Date', 'Type', 'ID', 'Total', 'Status']);
-            Order::where('status', '!=', 'cancelled')->whereBetween('created_at', [$start, $end . ' 23:59:59'])
-                ->orderBy('created_at')
-                ->get(['id', 'created_at', 'total', 'status'])
-                ->each(function ($o) use ($handle) {
-                    fputcsv($handle, [$o->created_at->toDateString(), 'Order', $o->id, $o->total, $o->status]);
-                });
-            Sale::whereBetween('created_at', [$start, $end . ' 23:59:59'])
-                ->orderBy('created_at')
-                ->get(['id', 'created_at', 'total', 'status'])
-                ->each(function ($s) use ($handle) {
-                    fputcsv($handle, [$s->created_at->toDateString(), 'POS', $s->id, $s->total, $s->status]);
-                });
-            fclose($handle);
-        }, 200, $headers);
+        try {
+            return response()->stream(function () use ($start, $end) {
+                $handle = fopen('php://output', 'w');
+                if ($handle === false) {
+                    throw new \RuntimeException('Failed to open output stream');
+                }
+                fputcsv($handle, ['Date', 'Type', 'ID', 'Total', 'Status']);
+                Order::where('status', '!=', 'cancelled')->whereBetween('created_at', [$start, $end . ' 23:59:59'])
+                    ->orderBy('created_at')
+                    ->get(['id', 'created_at', 'total', 'status'])
+                    ->each(function ($o) use ($handle) {
+                        fputcsv($handle, [$o->created_at->toDateString(), 'Order', $o->id, $o->total, $o->status]);
+                    });
+                Sale::whereBetween('created_at', [$start, $end . ' 23:59:59'])
+                    ->orderBy('created_at')
+                    ->get(['id', 'created_at', 'total', 'status'])
+                    ->each(function ($s) use ($handle) {
+                        fputcsv($handle, [$s->created_at->toDateString(), 'POS', $s->id, $s->total, $s->status]);
+                    });
+                fclose($handle);
+            }, 200, $headers);
+        } catch (Throwable $e) {
+            Log::error('Report CSV export failed', ['exception' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
+            return redirect()->route('admin.reports.index')->with('error', 'Failed to export report. Please try again.');
+        }
     }
 }

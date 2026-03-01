@@ -1,7 +1,4 @@
-/* Storefront: Bootstrap 5 + minimal overrides */
-@import 'bootstrap/scss/bootstrap';
-
-/* Optional: store-specific variables */
+/* Storefront: overrides (Bootstrap loaded via layout) */
 :root {
     --store-primary: #0d6efd;
     --store-footer-bg: #212529;

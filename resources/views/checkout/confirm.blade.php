@@ -115,7 +115,8 @@ $(function() {
             btn.prop('disabled', false).removeClass('opacity-75');
             var msg = 'Could not place order.';
             if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-            if (typeof showToast === 'function') showToast(msg, 'error');
+            if (typeof showAlert === 'function') showAlert('error', 'Error', msg);
+            else if (typeof showToast === 'function') showToast(msg, 'error');
         });
     });
 });

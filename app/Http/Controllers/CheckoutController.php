@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use App\Http\Requests\CheckoutStoreRequest;
 
 class CheckoutController extends Controller
 {
@@ -44,7 +45,7 @@ class CheckoutController extends Controller
         return view('checkout.index', compact('cartItems', 'subtotal', 'shipping', 'tax', 'total', 'initiateEventId'));
     }
 
-    public function store(Request $request): JsonResponse|RedirectResponse
+    public function store(CheckoutStoreRequest $request): JsonResponse|RedirectResponse
     {
         $cart = session('cart', []);
         if (empty($cart)) {
@@ -54,22 +55,7 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
 
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'name' => 'required|string|min:2|max:255',
-            'phone' => ['required', 'string', 'regex:/^01[3-9]\d{8}$/'],
-            'city' => 'required|string|max:255',
-            'address' => 'required|string|min:10',
-            'email' => 'nullable|email',
-        ]);
-
-        if ($validator->fails()) {
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
-            }
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $validated = $validator->validated();
+        $validated = $request->validated();
         session(['checkout_customer' => $validated]);
 
         if ($request->wantsJson() || $request->ajax()) {

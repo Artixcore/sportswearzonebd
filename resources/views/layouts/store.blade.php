@@ -14,9 +14,8 @@
 
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/store.css', 'resources/js/store.js'])
-    @else
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     @endif
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="d-flex flex-column min-vh-100">
     @include('partials.store-nav')
@@ -40,9 +39,7 @@
     @include('partials.store-footer')
 
     @stack('scripts')
-    @if (!file_exists(public_path('build/manifest.json')) && !file_exists(public_path('hot')))
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    @endif
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     @php $metaPixelId = \App\Models\Setting::get('meta_pixel_id', config('meta.pixel_id')); @endphp
     @if($metaPixelId)
     <script>
