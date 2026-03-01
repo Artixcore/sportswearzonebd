@@ -64,7 +64,7 @@
         <div>
             <span class="inline-block rounded-md bg-base px-2 py-0.5 text-xs font-medium text-white">
                 @if($product->category)
-                    {{ $product->category->parent_id ? $product->category->parent->name . ' › ' . $product->category->name : $product->category->name }}
+                    {{ $product->category->parent_id && $product->category->parent ? $product->category->parent->name . ' › ' . $product->category->name : $product->category->name }}
                 @else
                     Uncategorized
                 @endif

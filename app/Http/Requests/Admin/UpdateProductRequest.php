@@ -11,6 +11,13 @@ class UpdateProductRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('category_id') && $this->category_id === '') {
+            $this->merge(['category_id' => null]);
+        }
+    }
+
     public function rules(): array
     {
         $product = $this->route('product');
