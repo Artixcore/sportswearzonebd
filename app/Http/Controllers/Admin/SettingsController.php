@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,7 @@ class SettingsController extends Controller
         Setting::set('meta_access_token', $request->meta_access_token);
         Setting::set('seo_default_title', $request->seo_default_title);
         Setting::set('seo_default_description', $request->seo_default_description);
+        ActivityLog::log('settings.updated', 'Settings updated.');
         return redirect()->route('admin.settings.index')->with('success', 'Settings saved.');
     }
 }

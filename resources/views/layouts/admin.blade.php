@@ -5,51 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin') - {{ config('app.name') }}</title>
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/store.css', 'resources/js/store.js'])
-    @else
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    @endif
+    @vite(['resources/css/admin.css'])
 </head>
-<body>
-    <div class="d-flex">
-        <nav id="admin-sidebar" class="bg-dark text-white vh-100 p-3" style="width: 220px;">
-            <a href="{{ route('admin.dashboard') }}" class="text-white text-decoration-none fw-bold d-block mb-4">{{ config('app.name') }} Admin</a>
-            <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link text-white" href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="{{ route('admin.products.index') }}">Products</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="{{ route('admin.categories.index') }}">Categories</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="{{ route('admin.orders.index') }}">Orders</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="{{ route('admin.customers.index') }}">Customers</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="{{ route('admin.settings.index') }}">Settings</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="{{ route('home') }}">View Store</a></li>
-            </ul>
-        </nav>
-        <div class="flex-grow-1 d-flex flex-column">
-            <header class="bg-light border-bottom px-4 py-2 d-flex justify-content-between align-items-center">
-                <span class="text-muted">Admin</span>
-                <div>
-                    <span class="me-2">{{ Auth::user()->name }}</span>
-                    <form action="{{ route('logout') }}" method="POST" class="d-inline">
+<body class="bg-slate-100 text-slate-800 antialiased">
+    <div class="flex min-h-screen">
+        {{-- Sidebar --}}
+        <aside id="admin-sidebar" class="w-56 bg-slate-800 text-white flex-shrink-0 flex flex-col transition-all duration-200 print:hidden">
+            <div class="p-4 border-b border-slate-700">
+                <a href="{{ route('admin.dashboard') }}" class="text-lg font-semibold text-white hover:text-slate-200">{{ config('app.name') }} Admin</a>
+            </div>
+            <nav class="flex-1 overflow-y-auto p-3">
+                <ul class="space-y-0.5">
+                    <li><a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Dashboard</a></li>
+                    <li><a href="{{ route('admin.products.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Products</a></li>
+                    <li><a href="{{ route('admin.categories.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Categories</a></li>
+                    <li><a href="{{ route('admin.inventory.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Inventory</a></li>
+                    <li><a href="{{ route('admin.orders.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Orders</a></li>
+                    <li><a href="{{ route('admin.pos.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">POS</a></li>
+                    <li><a href="{{ route('admin.sales.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Sales</a></li>
+                    <li><a href="{{ route('admin.customers.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Customers</a></li>
+                    <li><a href="{{ route('admin.reports.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Reports</a></li>
+                    <li><a href="{{ route('admin.activity-logs.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Activity Log</a></li>
+                    <li><a href="{{ route('admin.settings.index') }}" class="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white">Settings</a></li>
+                    <li class="border-t border-slate-700 mt-3 pt-3"><a href="{{ route('home') }}" class="block px-3 py-2 rounded-md text-slate-300 hover:bg-slate-700 hover:text-white">View Store</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <div class="flex-1 flex flex-col min-w-0">
+            {{-- Header --}}
+            <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between print:hidden">
+                <span class="text-slate-500 text-sm">Admin</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium text-slate-700">{{ Auth::user()->name }}</span>
+                    <form action="{{ route('logout') }}" method="POST" class="inline">
                         @csrf
-                        <button type="submit" class="btn btn-sm btn-outline-secondary">Logout</button>
+                        <button type="submit" class="text-sm text-slate-600 hover:text-slate-900">Logout</button>
                     </form>
                 </div>
             </header>
-            <main class="p-4">
+
+            <main class="flex-1 p-4 md:p-6">
+                {{-- Toasts --}}
                 @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+                    <div class="mb-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 flex items-center justify-between" role="alert">
+                        <span>{{ session('success') }}</span>
+                        <button type="button" class="text-emerald-600 hover:text-emerald-800" onclick="this.parentElement.remove()">×</button>
+                    </div>
                 @endif
                 @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+                    <div class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 flex items-center justify-between" role="alert">
+                        <span>{{ session('error') }}</span>
+                        <button type="button" class="text-red-600 hover:text-red-800" onclick="this.parentElement.remove()">×</button>
+                    </div>
                 @endif
+                @if($errors->any())
+                    <div class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3">
+                        <ul class="list-disc list-inside text-sm">
+                            @foreach($errors->all() as $err)
+                                <li>{{ $err }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 @yield('content')
             </main>
         </div>
     </div>
     @stack('scripts')
-    @if (!file_exists(public_path('build/manifest.json')) && !file_exists(public_path('hot')))
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    @endif
 </body>
 </html>

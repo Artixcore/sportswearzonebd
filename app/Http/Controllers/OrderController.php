@@ -65,6 +65,8 @@ class OrderController extends Controller
             'shipping' => $shipping,
             'total' => $total,
             'currency' => 'BDT',
+            'payment_method' => 'cod',
+            'source' => 'online',
             'meta' => [
                 'utm_source' => $request->get('utm_source'),
                 'utm_medium' => $request->get('utm_medium'),

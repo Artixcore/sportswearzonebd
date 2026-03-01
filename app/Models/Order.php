@@ -10,6 +10,7 @@ class Order extends Model
 {
     protected $fillable = [
         'user_id',
+        'customer_id',
         'guest_email',
         'status',
         'subtotal',
@@ -17,6 +18,8 @@ class Order extends Model
         'shipping',
         'total',
         'currency',
+        'payment_method',
+        'source',
         'meta',
         'shipping_name',
         'shipping_phone',
@@ -25,6 +28,8 @@ class Order extends Model
         'billing_name',
         'billing_phone',
         'billing_address',
+        'created_by',
+        'updated_by',
     ];
 
     protected function casts(): array
@@ -43,8 +48,23 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

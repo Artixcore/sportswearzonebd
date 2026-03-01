@@ -3,89 +3,102 @@
 @section('title', 'Edit Product')
 
 @section('content')
-<h1 class="h4 mb-4">Edit Product</h1>
-<form action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data">
+<h1 class="text-2xl font-semibold text-slate-800 mb-6">Edit Product</h1>
+<div class="mb-4">
+    <a href="{{ route('admin.products.variants.index', $product) }}" class="text-sm text-slate-600 hover:text-slate-900">Manage Variants</a>
+</div>
+<form action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
     @csrf
     @method('PUT')
-    <div class="row">
-        <div class="col-md-8">
-            <div class="mb-3">
-                <label class="form-label">Name *</label>
-                <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $product->name) }}" required>
-                @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+                <input type="text" name="name" value="{{ old('name', $product->name) }}" required class="w-full rounded border-slate-300 shadow-sm">
+                @error('name')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
             </div>
-            <div class="mb-3">
-                <label class="form-label">Slug</label>
-                <input type="text" name="slug" class="form-control @error('slug') is-invalid @enderror" value="{{ old('slug', $product->slug) }}">
-                @error('slug')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Slug</label>
+                <input type="text" name="slug" value="{{ old('slug', $product->slug) }}" class="w-full rounded border-slate-300 shadow-sm">
+                @error('slug')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
             </div>
-            <div class="mb-3">
-                <label class="form-label">Category</label>
-                <select name="category_id" class="form-select">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                <select name="category_id" class="w-full rounded border-slate-300 shadow-sm">
                     <option value="">— None —</option>
                     @foreach($categories as $c)
                         <option value="{{ $c->id }}" {{ old('category_id', $product->category_id) == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Short Description</label>
-                <textarea name="short_description" class="form-control" rows="2">{{ old('short_description', $product->short_description) }}</textarea>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Short Description</label>
+                <textarea name="short_description" rows="2" class="w-full rounded border-slate-300 shadow-sm">{{ old('short_description', $product->short_description) }}</textarea>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Description</label>
-                <textarea name="description" class="form-control" rows="4">{{ old('description', $product->description) }}</textarea>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <textarea name="description" rows="4" class="w-full rounded border-slate-300 shadow-sm">{{ old('description', $product->description) }}</textarea>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="mb-3">
-                <label class="form-label">Price *</label>
-                <input type="number" step="0.01" name="price" class="form-control @error('price') is-invalid @enderror" value="{{ old('price', $product->price) }}" required>
-                @error('price')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Price *</label>
+                <input type="number" step="0.01" name="price" value="{{ old('price', $product->price) }}" required class="w-full rounded border-slate-300 shadow-sm">
+                @error('price')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
             </div>
-            <div class="mb-3">
-                <label class="form-label">Compare at price</label>
-                <input type="number" step="0.01" name="compare_at_price" class="form-control" value="{{ old('compare_at_price', $product->compare_at_price) }}">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Compare at price</label>
+                <input type="number" step="0.01" name="compare_at_price" value="{{ old('compare_at_price', $product->compare_at_price) }}" class="w-full rounded border-slate-300 shadow-sm">
             </div>
-            <div class="mb-3">
-                <label class="form-label">SKU</label>
-                <input type="text" name="sku" class="form-control" value="{{ old('sku', $product->sku) }}">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Cost price</label>
+                <input type="number" step="0.01" name="cost_price" value="{{ old('cost_price', $product->cost_price) }}" class="w-full rounded border-slate-300 shadow-sm">
             </div>
-            <div class="mb-3">
-                <label class="form-label">Stock</label>
-                <input type="number" name="stock" class="form-control" value="{{ old('stock', $product->stock) }}">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Discount %</label>
+                <input type="number" step="0.01" name="discount_percent" value="{{ old('discount_percent', $product->discount_percent) }}" class="w-full rounded border-slate-300 shadow-sm">
             </div>
-            <div class="mb-3">
-                <div class="form-check">
-                    <input type="checkbox" name="is_active" value="1" class="form-check-input" id="is_active" {{ old('is_active', $product->is_active) ? 'checked' : '' }}>
-                    <label class="form-check-label" for="is_active">Active</label>
-                </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">SKU</label>
+                <input type="text" name="sku" value="{{ old('sku', $product->sku) }}" class="w-full rounded border-slate-300 shadow-sm">
             </div>
-            <div class="mb-3">
-                <div class="form-check">
-                    <input type="checkbox" name="is_featured" value="1" class="form-check-input" id="is_featured" {{ old('is_featured', $product->is_featured) ? 'checked' : '' }}>
-                    <label class="form-check-label" for="is_featured">Featured</label>
-                </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Stock</label>
+                <input type="number" name="stock" value="{{ old('stock', $product->stock) }}" class="w-full rounded border-slate-300 shadow-sm">
             </div>
-            <div class="mb-3">
-                <label class="form-label">Sort order</label>
-                <input type="number" name="sort_order" class="form-control" value="{{ old('sort_order', $product->sort_order) }}">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Low stock threshold</label>
+                <input type="number" name="low_stock_threshold" value="{{ old('low_stock_threshold', $product->low_stock_threshold) }}" class="w-full rounded border-slate-300 shadow-sm">
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" name="is_active" value="1" id="is_active" {{ old('is_active', $product->is_active) ? 'checked' : '' }} class="rounded border-slate-300">
+                <label for="is_active" class="text-sm text-slate-700">Active</label>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" name="is_featured" value="1" id="is_featured" {{ old('is_featured', $product->is_featured) ? 'checked' : '' }} class="rounded border-slate-300">
+                <label for="is_featured" class="text-sm text-slate-700">Featured</label>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Sort order</label>
+                <input type="number" name="sort_order" value="{{ old('sort_order', $product->sort_order) }}" class="w-full rounded border-slate-300 shadow-sm">
             </div>
             @if($product->images->isNotEmpty())
-                <p class="small text-muted">Current images:</p>
-                <div class="d-flex gap-1 mb-2 flex-wrap">
+                <p class="text-sm text-slate-500">Current images:</p>
+                <div class="flex gap-2 flex-wrap">
                     @foreach($product->images as $img)
-                        <img src="{{ asset('storage/' . $img->path) }}" alt="" style="width: 60px; height: 60px; object-fit: cover;">
+                        <img src="{{ asset('storage/' . $img->path) }}" alt="" class="w-14 h-14 object-cover rounded">
                     @endforeach
                 </div>
             @endif
-            <div class="mb-3">
-                <label class="form-label">Add more images</label>
-                <input type="file" name="images[]" class="form-control" multiple accept="image/*">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Add more images</label>
+                <input type="file" name="images[]" multiple accept="image/*" class="w-full text-sm">
             </div>
         </div>
     </div>
-    <button type="submit" class="btn btn-primary">Update Product</button>
-    <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">Cancel</a>
+    <div class="flex gap-3">
+        <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700">Update Product</button>
+        <a href="{{ route('admin.products.index') }}" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300">Cancel</a>
+    </div>
 </form>
 @endsection
