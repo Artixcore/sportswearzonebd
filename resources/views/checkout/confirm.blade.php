@@ -46,7 +46,7 @@
                         <li class="flex justify-between py-3">
                             <div class="flex gap-3">
                                 @if($item->product->primaryImage)
-                                    <img src="{{ asset('storage/' . $item->product->primaryImage->path) }}" alt="" class="h-14 w-14 shrink-0 rounded-lg object-cover">
+                                    <img src="{{ storage_asset($item->product->primaryImage->path) }}" alt="" class="h-14 w-14 shrink-0 rounded-lg object-cover">
                                 @else
                                     <div class="h-14 w-14 shrink-0 rounded-lg bg-muted"></div>
                                 @endif

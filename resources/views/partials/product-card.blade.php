@@ -2,7 +2,7 @@
     <div class="card h-100 border-0 shadow-sm">
         <a href="{{ route('product.show', $product->slug) }}" class="text-decoration-none text-dark">
             @if($product->primaryImage)
-                <img src="{{ asset('storage/' . $product->primaryImage->path) }}" class="card-img-top" alt="{{ $product->name }}" style="height: 200px; object-fit: cover;">
+                <img src="{{ storage_asset($product->primaryImage->path) }}" class="card-img-top" alt="{{ $product->name }}" style="height: 200px; object-fit: cover;">
             @else
                 <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
                     <span class="text-white">No image</span>

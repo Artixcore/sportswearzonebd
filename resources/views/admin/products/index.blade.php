@@ -53,7 +53,7 @@
                     <tr>
                         <td class="px-4 py-2">
                             @if($p->primaryImage)
-                                <img src="{{ asset('storage/' . $p->primaryImage->path) }}" alt="" class="w-12 h-12 object-cover rounded">
+                                <img src="{{ storage_asset($p->primaryImage->path) }}" alt="" class="w-12 h-12 object-cover rounded">
                             @else
                                 <span class="text-slate-400">—</span>
                             @endif

@@ -4,7 +4,7 @@
     <a href="{{ route('product.show', $product->slug) }}" class="group block flex-shrink-0 overflow-hidden">
         <div class="relative aspect-square bg-muted">
             @if($product->primaryImage)
-                <img src="{{ asset('storage/' . $product->primaryImage->path) }}"
+                <img src="{{ storage_asset($product->primaryImage->path) }}"
                      alt="{{ $product->name }}"
                      class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105">
             @else

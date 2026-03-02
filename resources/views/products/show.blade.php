@@ -12,7 +12,7 @@
 <meta property="og:type" content="product">
 <meta property="og:url" content="{{ url()->current() }}">
 @if($product->primaryImage)
-<meta property="og:image" content="{{ asset('storage/' . $product->primaryImage->path) }}">
+<meta property="og:image" content="{{ storage_asset($product->primaryImage->path) }}">
 @endif
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{ $product->meta_title ?? $product->name }}">
@@ -41,7 +41,7 @@
             <div id="product-main-image" class="aspect-square overflow-hidden rounded-xl bg-muted">
                 @if($product->display_images->isNotEmpty())
                     @foreach($product->display_images as $i => $img)
-                        <img data-gallery-main="{{ $i }}" src="{{ asset('storage/' . $img->path) }}" alt="{{ $product->name }}" class="h-full w-full object-contain {{ $i === 0 ? '' : 'hidden' }}">
+                        <img data-gallery-main="{{ $i }}" src="{{ storage_asset($img->path) }}" alt="{{ $product->name }}" class="h-full w-full object-contain {{ $i === 0 ? '' : 'hidden' }}">
                     @endforeach
                 @else
                     <div class="flex h-full w-full items-center justify-center text-gray-400">
@@ -53,7 +53,7 @@
                 <div class="flex gap-2 overflow-x-auto pb-2">
                     @foreach($product->display_images as $i => $img)
                         <button type="button" data-gallery-thumb="{{ $i }}" class="gallery-thumb shrink-0 rounded-lg border-2 border-transparent focus:border-accent focus:outline-none">
-                            <img src="{{ asset('storage/' . $img->path) }}" alt="" class="h-16 w-16 rounded-lg object-cover">
+                            <img src="{{ storage_asset($img->path) }}" alt="" class="h-16 w-16 rounded-lg object-cover">
                         </button>
                     @endforeach
                 </div>

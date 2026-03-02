@@ -26,7 +26,7 @@ class SeoService
     public function productJsonLd(Product $product): array
     {
         $image = $product->primaryImage
-            ? url('storage/' . $product->primaryImage->path)
+            ? storage_asset($product->primaryImage->path)
             : null;
         return [
             '@context' => 'https://schema.org',

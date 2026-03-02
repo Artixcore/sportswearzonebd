@@ -111,7 +111,7 @@
                 @endphp
                 @if($mainImagePath)
                     <div class="mb-2">
-                        <img id="current_main_preview" src="{{ asset('storage/' . $mainImagePath) }}" alt="Main" class="w-24 h-24 object-cover rounded border border-slate-200">
+                        <img id="current_main_preview" src="{{ storage_asset($mainImagePath) }}" alt="Main" class="w-24 h-24 object-cover rounded border border-slate-200">
                     </div>
                 @else
                     <div id="current_main_preview" class="hidden mb-2">
@@ -131,7 +131,7 @@
                 <div id="gallery_list" class="space-y-2 mb-2">
                     @foreach($product->images as $img)
                         <div class="flex items-center gap-2 gallery-item" data-image-id="{{ $img->id }}">
-                            <img src="{{ asset('storage/' . $img->path) }}" alt="" class="w-14 h-14 object-cover rounded border border-slate-200">
+                            <img src="{{ storage_asset($img->path) }}" alt="" class="w-14 h-14 object-cover rounded border border-slate-200">
                             <button type="button" class="gallery-delete-btn px-2 py-1 text-sm text-red-600 hover:text-red-800 border border-red-200 rounded hover:bg-red-50" data-image-id="{{ $img->id }}">Delete</button>
                         </div>
                     @endforeach

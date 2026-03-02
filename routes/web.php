@@ -10,6 +10,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\StorageController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
@@ -26,6 +27,8 @@ use App\Http\Controllers\Admin\SaleController as AdminSaleController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/storage-files/{path}', [StorageController::class, 'show'])->where('path', '.*')->name('storage.serve');
 
 Route::get('/', HomeController::class)->name('home');
 

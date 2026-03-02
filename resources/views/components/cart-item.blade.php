@@ -9,7 +9,7 @@
 <div class="cart-item-row flex flex-col gap-3 border-b border-gray-200 py-4 sm:flex-row sm:items-center sm:gap-4" data-product-id="{{ $product->id }}" data-size="{{ $size }}">
     <a href="{{ route('product.show', $product->slug) }}" class="shrink-0 overflow-hidden rounded-lg bg-muted sm:w-24 sm:aspect-square">
         @if($product->primaryImage)
-            <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}" class="h-24 w-full object-cover sm:h-full">
+            <img src="{{ storage_asset($product->primaryImage->path) }}" alt="{{ $product->name }}" class="h-24 w-full object-cover sm:h-full">
         @else
             <div class="flex h-24 w-full items-center justify-center text-gray-400 sm:h-full">
                 <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"/></svg>
