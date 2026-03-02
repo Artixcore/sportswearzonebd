@@ -96,7 +96,11 @@
             {{-- Header --}}
             <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between print:hidden">
                 <span class="text-slate-500 text-sm">Admin</span>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-4">
+                    <a href="{{ route('admin.orders.index') }}" id="admin-new-orders-bell" class="relative p-1.5 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900" title="Orders">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        <span id="admin-orders-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500 text-white text-xs font-medium px-1">0</span>
+                    </a>
                     <span class="text-sm font-medium text-slate-700">{{ Auth::user()->name }}</span>
                     <form action="{{ route('logout') }}" method="POST" class="inline">
                         @csrf
@@ -147,6 +151,87 @@
     });
     </script>
     @endif
+    <script>
+    (function() {
+        var newOrdersCheckUrl = {{ json_encode(route('admin.api.new-orders-check')) }};
+        var ordersShowUrlBase = {{ json_encode(route('admin.orders.show', ['order' => '__ID__'])) }};
+        var lastKnownOrderId = 0;
+        var pollIntervalMs = 15000;
+
+        function playBip() {
+            try {
+                var C = window.AudioContext || window.webkitAudioContext;
+                if (!C) return;
+                var ctx = new C();
+                var play = function(freq, start, duration) {
+                    var o = ctx.createOscillator();
+                    var g = ctx.createGain();
+                    o.connect(g);
+                    g.connect(ctx.destination);
+                    o.frequency.value = freq;
+                    o.type = 'sine';
+                    g.gain.setValueAtTime(0.15, start);
+                    g.gain.exponentialRampToValueAtTime(0.01, start + duration);
+                    o.start(start);
+                    o.stop(start + duration);
+                };
+                play(880, 0, 0.08);
+                play(880, 0.12, 0.08);
+            } catch (e) {}
+        }
+
+        function updateBadge(pendingCount) {
+            var badge = document.getElementById('admin-orders-badge');
+            if (!badge) return;
+            if (pendingCount > 0) {
+                badge.textContent = pendingCount > 99 ? '99+' : pendingCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function poll() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', newOrdersCheckUrl);
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.onload = function() {
+                if (xhr.status !== 200) return;
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    var latestId = data.latest_order_id || 0;
+                    var pendingCount = data.pending_count != null ? data.pending_count : 0;
+                    updateBadge(pendingCount);
+                    if (latestId > lastKnownOrderId) {
+                        if (lastKnownOrderId > 0) {
+                            playBip();
+                            var viewUrl = ordersShowUrlBase.replace('__ID__', latestId);
+                            if (typeof showAlert === 'function') {
+                                showAlert('success', 'New order received', 'Order #' + latestId, {
+                                    showCancelButton: true,
+                                    confirmButtonText: 'View order',
+                                    cancelButtonText: 'Dismiss'
+                                }).then(function(r) {
+                                    if (r.isConfirmed) window.location.href = viewUrl;
+                                });
+                            } else {
+                                if (confirm('New order #' + latestId + ' received. View order?')) window.location.href = viewUrl;
+                            }
+                        }
+                        lastKnownOrderId = latestId;
+                    }
+                } catch (e) {}
+            };
+            xhr.send();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            poll();
+            setInterval(poll, pollIntervalMs);
+        });
+    })();
+    </script>
     @stack('scripts')
 </body>
 </html>

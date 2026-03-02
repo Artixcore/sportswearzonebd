@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Sale;
+use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -46,5 +47,17 @@ class DashboardController extends Controller
             'recentActivity',
             'recentOrders'
         ));
+    }
+
+    public function newOrdersCheck(): JsonResponse
+    {
+        $latest = Order::orderByDesc('id')->first();
+        $pendingCount = Order::whereIn('status', ['pending', 'confirmed', 'processing'])->count();
+
+        return response()->json([
+            'latest_order_id' => $latest ? (int) $latest->id : 0,
+            'latest_at' => $latest ? $latest->created_at->toIso8601String() : null,
+            'pending_count' => $pendingCount,
+        ]);
     }
 }
