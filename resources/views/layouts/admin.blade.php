@@ -153,7 +153,7 @@
     @endif
     <script>
     (function() {
-        var newOrdersCheckUrl = {{ json_encode(route('admin.api.new-orders-check')) }};
+        var newOrdersCheckUrl = {{ Route::has('admin.api.new-orders-check') ? json_encode(route('admin.api.new-orders-check')) : 'null' }};
         var ordersShowUrlBase = {{ json_encode(route('admin.orders.show', ['order' => '__ID__'])) }};
         var lastKnownOrderId = 0;
         var pollIntervalMs = 15000;
@@ -192,6 +192,7 @@
         }
 
         function poll() {
+            if (!newOrdersCheckUrl) return;
             var xhr = new XMLHttpRequest();
             xhr.open('GET', newOrdersCheckUrl);
             xhr.setRequestHeader('Accept', 'application/json');
@@ -227,8 +228,10 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            poll();
-            setInterval(poll, pollIntervalMs);
+            if (newOrdersCheckUrl) {
+                poll();
+                setInterval(poll, pollIntervalMs);
+            }
         });
     })();
     </script>
