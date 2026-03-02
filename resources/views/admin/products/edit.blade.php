@@ -108,14 +108,18 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1">Main photo</label>
                 @php
                     $mainImagePath = $product->main_image_path ?? $product->images->first()?->path;
+                    $hasMainImagePath = !empty($product->main_image_path);
                 @endphp
                 @if($mainImagePath)
-                    <div class="mb-2">
+                    <div id="main_photo_container" class="mb-2">
                         <img id="current_main_preview" src="{{ storage_asset($mainImagePath) }}" alt="Main" class="w-24 h-24 object-cover rounded border border-slate-200">
+                        @if($hasMainImagePath)
+                            <button type="button" id="remove_main_photo_btn" class="mt-1 block text-sm text-red-600 hover:text-red-800">Remove main photo</button>
+                        @endif
                     </div>
                 @else
-                    <div id="current_main_preview" class="hidden mb-2">
-                        <img src="" alt="Main" class="w-24 h-24 object-cover rounded border border-slate-200">
+                    <div id="main_photo_container" class="hidden mb-2">
+                        <img id="current_main_preview" src="" alt="Main" class="w-24 h-24 object-cover rounded border border-slate-200">
                     </div>
                 @endif
                 <label class="block text-xs text-slate-500 mb-1">Replace main photo (optional)</label>
@@ -212,7 +216,30 @@
     }
 
     var deleteImageUrlBase = {{ json_encode(route('admin.products.images.destroy', [$product, 0])) }};
+    var removeMainImageUrl = {{ json_encode(route('admin.products.main-image.destroy', [$product])) }};
     var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    function showAlertSafe(type, title, text) {
+        if (typeof showAlert === 'function') {
+            showAlert(type, title, text);
+        } else if (typeof Swal !== 'undefined') {
+            Swal.fire({ icon: type === 'error' ? 'error' : 'success', title: title, text: text });
+        } else {
+            alert(title + ': ' + text);
+        }
+    }
+
+    function showConfirmSafe(title, text, onConfirm) {
+        if (typeof showConfirm === 'function') {
+            showConfirm(title, text, onConfirm);
+        } else if (typeof Swal !== 'undefined') {
+            Swal.fire({ title: title, text: text, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc2626', confirmButtonText: 'Yes, remove' }).then(function(r) {
+                if (r.isConfirmed && onConfirm) onConfirm();
+            });
+        } else {
+            if (confirm(title + ' ' + text)) onConfirm();
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         var editMainInput = document.getElementById('edit_main_image');
@@ -256,19 +283,18 @@
             btn.addEventListener('click', function() {
                 var imageId = this.getAttribute('data-image-id');
                 var row = this.closest('.gallery-item');
-                if (typeof showConfirm !== 'function') {
-                    if (confirm('Remove this gallery image?')) {
-                        doDelete(imageId, row);
-                    }
-                    return;
-                }
-                showConfirm('Remove gallery image?', 'This image will be deleted from the product.', function() {
-                    doDelete(imageId, row);
+                var self = this;
+                showConfirmSafe('Remove gallery image?', 'This image will be deleted from the product.', function() {
+                    doDelete(imageId, row, self);
                 });
             });
         });
 
-        function doDelete(imageId, rowEl) {
+        function doDelete(imageId, rowEl, btnEl) {
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.textContent = 'Deleting…';
+            }
             var url = deleteImageUrlBase.replace(/\/0$/, '/' + imageId);
             var xhr = new XMLHttpRequest();
             xhr.open('DELETE', url);
@@ -278,20 +304,71 @@
             xhr.onload = function() {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     if (rowEl) rowEl.remove();
-                    if (typeof showAlert === 'function') showAlert('success', 'Done', 'Gallery image deleted.');
+                    showAlertSafe('success', 'Done', 'Gallery image deleted.');
                 } else {
                     var msg = 'Failed to delete image.';
                     try {
                         var j = JSON.parse(xhr.responseText);
                         if (j.message) msg = j.message;
                     } catch (e) {}
-                    if (typeof showAlert === 'function') showAlert('error', 'Error', msg);
+                    showAlertSafe('error', 'Error', msg);
+                    if (btnEl) {
+                        btnEl.disabled = false;
+                        btnEl.textContent = 'Delete';
+                    }
                 }
             };
             xhr.onerror = function() {
-                if (typeof showAlert === 'function') showAlert('error', 'Error', 'Request failed.');
+                showAlertSafe('error', 'Error', 'Request failed. Please try again.');
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.textContent = 'Delete';
+                }
             };
             xhr.send();
+        }
+
+        var removeMainBtn = document.getElementById('remove_main_photo_btn');
+        if (removeMainBtn) {
+            removeMainBtn.addEventListener('click', function() {
+                var self = this;
+                showConfirmSafe('Remove main photo?', 'The main product image will be removed.', function() {
+                    self.disabled = true;
+                    self.textContent = 'Removing…';
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('DELETE', removeMainImageUrl);
+                    xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken || '');
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.onload = function() {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            var container = document.getElementById('main_photo_container');
+                            if (container) {
+                                container.querySelector('img').src = '';
+                                container.classList.add('hidden');
+                                var removeBtn = document.getElementById('remove_main_photo_btn');
+                                if (removeBtn) removeBtn.remove();
+                            }
+                            showAlertSafe('success', 'Done', 'Main photo removed.');
+                        } else {
+                            var msg = 'Failed to remove main photo.';
+                            try {
+                                var j = JSON.parse(xhr.responseText);
+                                if (j.message) msg = j.message;
+                            } catch (e) {}
+                            showAlertSafe('error', 'Error', msg);
+                            self.disabled = false;
+                            self.textContent = 'Remove main photo';
+                        }
+                    };
+                    xhr.onerror = function() {
+                        showAlertSafe('error', 'Error', 'Request failed. Please try again.');
+                        self.disabled = false;
+                        self.textContent = 'Remove main photo';
+                    };
+                    xhr.send();
+                });
+            });
         }
     });
 })();

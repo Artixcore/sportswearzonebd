@@ -229,16 +229,32 @@ class ProductController extends Controller
     public function destroyImage(Product $product, ProductImage $image): JsonResponse
     {
         if ($image->product_id !== $product->id) {
-            return response()->json(['message' => 'Image does not belong to this product.'], 403);
+            return response()->json(['success' => false, 'message' => 'Image does not belong to this product.'], 403);
         }
         try {
             Storage::disk('public')->delete($image->path);
         } catch (\Throwable $e) {
             report($e);
-            return response()->json(['message' => 'Failed to delete file from storage.'], 500);
+            return response()->json(['success' => false, 'message' => 'Failed to delete file from storage.'], 500);
         }
         $image->delete();
         return response()->json(['success' => true, 'message' => 'Gallery image deleted.']);
+    }
+
+    public function destroyMainImage(Product $product): JsonResponse
+    {
+        $path = $product->main_image_path;
+        if (! $path) {
+            return response()->json(['success' => false, 'message' => 'No main image to remove.'], 400);
+        }
+        try {
+            Storage::disk('public')->delete($path);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Failed to delete file from storage.'], 500);
+        }
+        $product->update(['main_image_path' => null]);
+        return response()->json(['success' => true, 'message' => 'Main photo removed.']);
     }
 
     private function uniqueFilename(\Illuminate\Http\UploadedFile $file): string

@@ -73,6 +73,7 @@ Route::middleware('auth')->group(function () {
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
     Route::get('/', AdminDashboardController::class)->name('dashboard');
     Route::delete('products/{product}/images/{image}', [AdminProductController::class, 'destroyImage'])->name('products.images.destroy');
+    Route::delete('products/{product}/main-image', [AdminProductController::class, 'destroyMainImage'])->name('products.main-image.destroy');
     Route::resource('products', AdminProductController::class)->except(['show']);
     Route::get('products/{product}/variants', [AdminProductVariantController::class, 'index'])->name('products.variants.index');
     Route::get('products/{product}/variants/create', [AdminProductVariantController::class, 'create'])->name('products.variants.create');
