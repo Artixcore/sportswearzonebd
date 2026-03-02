@@ -113,7 +113,7 @@
                 @if($mainImagePath)
                     <div id="main_photo_container" class="mb-2">
                         <img id="current_main_preview" src="{{ storage_asset($mainImagePath) }}" alt="Main" class="w-24 h-24 object-cover rounded border border-slate-200">
-                        @if($hasMainImagePath)
+                        @if($hasMainImagePath && Route::has('admin.products.main-image.destroy'))
                             <button type="button" id="remove_main_photo_btn" class="mt-1 block text-sm text-red-600 hover:text-red-800">Remove main photo</button>
                         @endif
                     </div>
@@ -216,7 +216,7 @@
     }
 
     var deleteImageUrlBase = {{ json_encode(route('admin.products.images.destroy', [$product, 0])) }};
-    var removeMainImageUrl = {{ json_encode(route('admin.products.main-image.destroy', [$product])) }};
+    var removeMainImageUrl = {{ Route::has('admin.products.main-image.destroy') ? json_encode(route('admin.products.main-image.destroy', [$product])) : 'null' }};
     var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
     function showAlertSafe(type, title, text) {
@@ -329,7 +329,7 @@
         }
 
         var removeMainBtn = document.getElementById('remove_main_photo_btn');
-        if (removeMainBtn) {
+        if (removeMainBtn && removeMainImageUrl) {
             removeMainBtn.addEventListener('click', function() {
                 var self = this;
                 showConfirmSafe('Remove main photo?', 'The main product image will be removed.', function() {
