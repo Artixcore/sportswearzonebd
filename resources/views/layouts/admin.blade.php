@@ -97,9 +97,9 @@
             <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between print:hidden">
                 <span class="text-slate-500 text-sm">Admin</span>
                 <div class="flex items-center gap-4">
-                    <a href="{{ route('admin.orders.index') }}" id="admin-new-orders-bell" class="relative p-1.5 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900" title="Orders">
+                    <a href="{{ route('admin.orders.index') }}" id="admin-new-orders-bell" class="relative p-1.5 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900" title="New orders (live)">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                        <span id="admin-orders-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500 text-white text-xs font-medium px-1">0</span>
+                        <span id="admin-orders-badge" class="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 flex items-center justify-center rounded-full bg-amber-500 text-white text-xs font-semibold px-1.5" aria-live="polite">0</span>
                     </a>
                     <span class="text-sm font-medium text-slate-700">{{ Auth::user()->name }}</span>
                     <form action="{{ route('logout') }}" method="POST" class="inline">
@@ -153,10 +153,11 @@
     @endif
     <script>
     (function() {
+        // New orders notification: AJAX polling only, no page reloads. Bell shows live count.
         var newOrdersCheckUrl = {{ Route::has('admin.api.new-orders-check') ? json_encode(route('admin.api.new-orders-check')) : 'null' }};
         var ordersShowUrlBase = {{ json_encode(route('admin.orders.show', ['order' => '__ID__'])) }};
         var lastKnownOrderId = 0;
-        var pollIntervalMs = 15000;
+        var pollIntervalMs = 10000;
 
         function playBip() {
             try {
@@ -183,18 +184,17 @@
         function updateBadge(pendingCount) {
             var badge = document.getElementById('admin-orders-badge');
             if (!badge) return;
-            if (pendingCount > 0) {
-                badge.textContent = pendingCount > 99 ? '99+' : pendingCount;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
+            var n = parseInt(pendingCount, 10);
+            if (isNaN(n) || n < 0) n = 0;
+            badge.textContent = n > 99 ? '99+' : n;
+            badge.classList.toggle('bg-amber-500', n === 0);
+            badge.classList.toggle('bg-emerald-600', n > 0);
         }
 
         function poll() {
             if (!newOrdersCheckUrl) return;
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', newOrdersCheckUrl);
+            xhr.open('GET', newOrdersCheckUrl, true);
             xhr.setRequestHeader('Accept', 'application/json');
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.onload = function() {
@@ -207,23 +207,24 @@
                     if (latestId > lastKnownOrderId) {
                         if (lastKnownOrderId > 0) {
                             playBip();
-                            var viewUrl = ordersShowUrlBase.replace('__ID__', latestId);
+                            var viewUrl = ordersShowUrlBase.replace('__ID__', String(latestId));
                             if (typeof showAlert === 'function') {
                                 showAlert('success', 'New order received', 'Order #' + latestId, {
                                     showCancelButton: true,
                                     confirmButtonText: 'View order',
                                     cancelButtonText: 'Dismiss'
                                 }).then(function(r) {
-                                    if (r.isConfirmed) window.location.href = viewUrl;
+                                    if (r.isConfirmed) window.open(viewUrl, '_blank');
                                 });
                             } else {
-                                if (confirm('New order #' + latestId + ' received. View order?')) window.location.href = viewUrl;
+                                if (confirm('New order #' + latestId + ' received. View order?')) window.open(viewUrl, '_blank');
                             }
                         }
                         lastKnownOrderId = latestId;
                     }
                 } catch (e) {}
             };
+            xhr.onerror = function() {};
             xhr.send();
         }
 
