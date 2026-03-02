@@ -135,6 +135,9 @@
 
                 @yield('content')
             </main>
+            <footer class="border-t border-slate-200 bg-white px-4 py-2 text-center text-sm text-slate-500 print:hidden">
+                Developed by <a href="https://artixcore.com" target="_blank" rel="noopener noreferrer" class="text-slate-600 hover:text-slate-900 underline">Artixcore</a>
+            </footer>
         </div>
     </div>
     @if(session('success') || session('error'))

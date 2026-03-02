@@ -33,6 +33,7 @@
         </div>
         <div class="mt-10 border-t border-base-light pt-8 text-center text-sm text-gray-400">
             &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+            <p class="mt-2">Developed by <a href="https://artixcore.com" target="_blank" rel="noopener noreferrer" class="text-gray-400 underline hover:text-white focus:outline-none focus:ring-2 focus:ring-accent">Artixcore</a></p>
         </div>
     </div>
 </footer>

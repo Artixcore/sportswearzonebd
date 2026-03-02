@@ -32,6 +32,7 @@
         <hr class="border-secondary my-4">
         <div class="small text-secondary text-center">
             &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+            <span class="d-block mt-2">Developed by <a href="https://artixcore.com" target="_blank" rel="noopener noreferrer" class="text-secondary text-decoration-underline">Artixcore</a></span>
         </div>
     </div>
 </footer>
