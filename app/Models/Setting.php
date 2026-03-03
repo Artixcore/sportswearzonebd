@@ -11,6 +11,8 @@ class Setting extends Model
 
     protected $keyType = 'string';
 
+    protected $primaryKey = 'key';
+
     protected $fillable = ['key', 'value'];
 
     public static function get(string $key, mixed $default = null): mixed
