@@ -1,8 +1,8 @@
 <nav class="sticky top-0 z-50 bg-base text-white shadow-md" aria-label="Main navigation">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         {{-- Logo --}}
-        <a href="{{ route('home') }}" class="shrink-0 text-lg font-bold tracking-tight focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-base">
-            {{ config('app.name') }}
+        <a href="{{ route('home') }}" class="shrink-0 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-base">
+            <img src="{{ asset('logo.jpeg') }}" alt="{{ config('app.name') }}" class="h-8 w-auto object-contain">
         </a>
 
         {{-- Search (desktop) --}}

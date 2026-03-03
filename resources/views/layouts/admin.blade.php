@@ -160,13 +160,40 @@
         var newOrdersCheckUrl = {{ Route::has('admin.api.new-orders-check') ? json_encode(route('admin.api.new-orders-check')) : 'null' }};
         var ordersShowUrlBase = {{ json_encode(route('admin.orders.show', ['order' => '__ID__'])) }};
         var lastKnownOrderId = 0;
-        var pollIntervalMs = 10000;
+        var pollIntervalMs = 5000;
+
+        // Shared AudioContext: unlock on first user interaction so sound works (browser autoplay policy).
+        var audioCtx = null;
+        var audioUnlocked = false;
+
+        function unlockAudio() {
+            if (audioUnlocked) return;
+            audioUnlocked = true;
+            var C = window.AudioContext || window.webkitAudioContext;
+            if (!C) return;
+            audioCtx = new C();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
 
         function playBip() {
             try {
                 var C = window.AudioContext || window.webkitAudioContext;
                 if (!C) return;
-                var ctx = new C();
+                var ctx = audioCtx;
+                if (!ctx) {
+                    ctx = new C();
+                    audioCtx = ctx;
+                }
+                if (ctx.state === 'suspended') {
+                    ctx.resume().then(function() { doPlayBip(ctx); });
+                } else {
+                    doPlayBip(ctx);
+                }
+            } catch (e) {}
+        }
+
+        function doPlayBip(ctx) {
+            try {
                 var play = function(freq, start, duration) {
                     var o = ctx.createOscillator();
                     var g = ctx.createGain();
@@ -194,6 +221,34 @@
             badge.classList.toggle('bg-emerald-600', n > 0);
         }
 
+        function showNewOrderAlert(latestId) {
+            var viewUrl = ordersShowUrlBase.replace('__ID__', String(latestId));
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'New order #' + latestId,
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true
+                });
+            }
+            setTimeout(function() {
+                if (typeof showAlert === 'function') {
+                    showAlert('success', 'New order received', 'Order #' + latestId, {
+                        showCancelButton: true,
+                        confirmButtonText: 'View order',
+                        cancelButtonText: 'Dismiss'
+                    }).then(function(r) {
+                        if (r.isConfirmed) window.open(viewUrl, '_blank');
+                    });
+                } else {
+                    if (confirm('New order #' + latestId + ' received. View order?')) window.open(viewUrl, '_blank');
+                }
+            }, 400);
+        }
+
         function poll() {
             if (!newOrdersCheckUrl) return;
             var xhr = new XMLHttpRequest();
@@ -202,30 +257,25 @@
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.onload = function() {
                 if (xhr.status !== 200) return;
+                var data;
                 try {
-                    var data = JSON.parse(xhr.responseText);
-                    var latestId = data.latest_order_id || 0;
-                    var pendingCount = data.pending_count != null ? data.pending_count : 0;
+                    data = JSON.parse(xhr.responseText);
+                } catch (e) {
+                    return;
+                }
+                var rawLatest = data.latest_order_id;
+                var latestId = (typeof rawLatest === 'number' && !isNaN(rawLatest)) ? rawLatest : (parseInt(rawLatest, 10) || 0);
+                var pendingCount = data.pending_count;
+                if (typeof pendingCount === 'number' && !isNaN(pendingCount) && pendingCount >= 0) {
                     updateBadge(pendingCount);
-                    if (latestId > lastKnownOrderId) {
-                        if (lastKnownOrderId > 0) {
-                            playBip();
-                            var viewUrl = ordersShowUrlBase.replace('__ID__', String(latestId));
-                            if (typeof showAlert === 'function') {
-                                showAlert('success', 'New order received', 'Order #' + latestId, {
-                                    showCancelButton: true,
-                                    confirmButtonText: 'View order',
-                                    cancelButtonText: 'Dismiss'
-                                }).then(function(r) {
-                                    if (r.isConfirmed) window.open(viewUrl, '_blank');
-                                });
-                            } else {
-                                if (confirm('New order #' + latestId + ' received. View order?')) window.open(viewUrl, '_blank');
-                            }
-                        }
-                        lastKnownOrderId = latestId;
+                }
+                if (latestId > lastKnownOrderId) {
+                    if (lastKnownOrderId > 0) {
+                        playBip();
+                        showNewOrderAlert(latestId);
                     }
-                } catch (e) {}
+                    lastKnownOrderId = latestId;
+                }
             };
             xhr.onerror = function() {};
             xhr.send();
@@ -236,6 +286,8 @@
                 poll();
                 setInterval(poll, pollIntervalMs);
             }
+            document.body.addEventListener('click', unlockAudio, { once: true });
+            document.body.addEventListener('keydown', unlockAudio, { once: true });
         });
     })();
     </script>
