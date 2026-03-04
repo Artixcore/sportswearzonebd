@@ -66,8 +66,9 @@ function renderCart() {
         const lineTotal = item.price * item.quantity - (item.discount || 0);
         total += lineTotal;
         html += '<div class="px-4 py-2 flex items-center justify-between gap-2 border-b border-slate-100">';
-        html += '<div class="flex-1 min-w-0"><p class="font-medium truncate">' + item.name + '</p><p class="text-sm text-slate-500">৳' + Number(item.price).toFixed(0) + ' × ' + item.quantity + '</p></div>';
-        html += '<div class="flex items-center gap-2">';
+        html += '<div class="flex-1 min-w-0"><p class="font-medium truncate">' + item.name + '</p><p class="text-sm text-slate-500">× ' + item.quantity + (item.discount ? ' · Disc ৳' + Number(item.discount).toFixed(0) : '') + '</p></div>';
+        html += '<div class="flex items-center gap-2 flex-wrap">';
+        html += '<label class="sr-only">Price</label><input type="number" min="0" step="0.01" value="' + Number(item.price) + '" class="w-20 rounded border-slate-300 text-sm pos-cart-price" data-index="' + i + '" title="Unit price" placeholder="Price">';
         html += '<input type="number" min="1" value="' + item.quantity + '" class="w-14 rounded border-slate-300 text-sm pos-cart-qty" data-index="' + i + '">';
         html += '<input type="number" min="0" step="0.01" value="' + (item.discount || 0) + '" class="w-16 rounded border-slate-300 text-sm pos-cart-discount" data-index="' + i + '" placeholder="Disc">';
         html += '<span class="font-medium w-20 text-right">৳' + lineTotal.toFixed(0) + '</span>';
@@ -78,6 +79,7 @@ function renderCart() {
     total -= orderDiscount;
     container.innerHTML = html;
     document.getElementById('pos-total').textContent = '৳' + Math.round(total);
+    document.querySelectorAll('.pos-cart-price').forEach(el => el.addEventListener('change', function() { cart[this.dataset.index].price = parseFloat(this.value) || 0; renderCart(); }));
     document.querySelectorAll('.pos-cart-qty').forEach(el => el.addEventListener('change', function() { cart[this.dataset.index].quantity = parseInt(this.value, 10) || 1; renderCart(); }));
     document.querySelectorAll('.pos-cart-discount').forEach(el => el.addEventListener('change', function() { cart[this.dataset.index].discount = parseFloat(this.value) || 0; renderCart(); }));
     document.querySelectorAll('.pos-cart-remove').forEach(el => el.addEventListener('click', function() { cart.splice(parseInt(this.dataset.index, 10), 1); renderCart(); }));
