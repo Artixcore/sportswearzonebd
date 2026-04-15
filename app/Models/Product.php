@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
+use LogicException;
 
 class Product extends Model
 {
@@ -51,6 +53,48 @@ class Product extends Model
         ];
     }
 
+    /**
+     * Build a URL slug from a product name that does not collide with any row (including soft-deleted).
+     */
+    public static function generateUniqueSlug(string $name, ?int $ignoreProductId = null): string
+    {
+        $base = Str::slug($name);
+        if ($base === '') {
+            $base = 'product';
+        }
+
+        $maxSlugLength = 255;
+        $suffixReserve = 20;
+        if (strlen($base) > $maxSlugLength - $suffixReserve) {
+            $base = rtrim(substr($base, 0, $maxSlugLength - $suffixReserve), '-');
+            if ($base === '') {
+                $base = 'product';
+            }
+        }
+
+        $n = 1;
+        for ($iter = 0; $iter < 10_000; $iter++) {
+            $suffix = $n === 1 ? '' : '-'.$n;
+            $maxBase = $maxSlugLength - strlen($suffix);
+            $truncatedBase = strlen($base) > $maxBase ? rtrim(substr($base, 0, $maxBase), '-') : $base;
+            if ($truncatedBase === '') {
+                $truncatedBase = 'product';
+            }
+            $slug = $truncatedBase.$suffix;
+
+            $query = static::query()->withTrashed()->where('slug', $slug);
+            if ($ignoreProductId !== null) {
+                $query->where('id', '!=', $ignoreProductId);
+            }
+            if (! $query->exists()) {
+                return $slug;
+            }
+            $n++;
+        }
+
+        throw new LogicException('Could not generate a unique product slug.');
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
@@ -91,6 +135,7 @@ class Product extends Model
         if ($this->main_image_path) {
             return (object) ['path' => $this->main_image_path];
         }
+
         return $this->images->first();
     }
 
@@ -102,6 +147,7 @@ class Product extends Model
         $main = $this->main_image_path
             ? collect([(object) ['path' => $this->main_image_path]])
             : collect();
+
         return $main->concat($this->images);
     }
 
@@ -114,6 +160,7 @@ class Product extends Model
             return true;
         }
         $raw = $this->getRawOriginal('discount_percent');
+
         return $raw !== null && (float) $raw > 0;
     }
 
@@ -133,6 +180,7 @@ class Product extends Model
         if ($discountPercent > 0) {
             return round($price - ($price * $discountPercent / 100), 2);
         }
+
         return round($price, 2);
     }
 
@@ -149,6 +197,7 @@ class Product extends Model
         if ($compareAt !== null && $compareAt > $price) {
             return round($compareAt, 2);
         }
+
         return round($price, 2);
     }
 
@@ -161,7 +210,8 @@ class Product extends Model
             return null;
         }
         $percent = $this->effective_discount_percent;
-        return $percent !== null ? '-' . (int) round($percent) . '%' : null;
+
+        return $percent !== null ? '-'.(int) round($percent).'%' : null;
     }
 
     /**
@@ -178,6 +228,7 @@ class Product extends Model
             return (1 - $price / $compareAt) * 100;
         }
         $raw = $this->getRawOriginal('discount_percent');
+
         return $raw !== null ? (float) $raw : null;
     }
 
@@ -186,6 +237,7 @@ class Product extends Model
         if ($this->variants()->exists()) {
             return $this->variants()->whereRaw('stock <= low_stock_threshold')->exists();
         }
+
         return $this->stock <= $this->low_stock_threshold;
     }
 

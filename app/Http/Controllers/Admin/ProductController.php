@@ -37,8 +37,8 @@ class ProductController extends Controller
         }
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                    ->orWhere('sku', 'like', '%' . $request->search . '%');
+                $q->where('name', 'like', '%'.$request->search.'%')
+                    ->orWhere('sku', 'like', '%'.$request->search.'%');
             });
         }
         $sort = $request->get('sort', 'sort_order');
@@ -74,6 +74,7 @@ class ProductController extends Controller
                 }
             }
         }
+
         return view('admin.products.create', compact('rootCategories', 'subcategoriesByParentId', 'selectedParentId', 'selectedSubcategoryId'));
     }
 
@@ -81,7 +82,7 @@ class ProductController extends Controller
     {
         $validated = $request->validated();
         unset($validated['main_image'], $validated['gallery_images']);
-        $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
+        $validated['slug'] = $validated['slug'] ?? Product::generateUniqueSlug($validated['name']);
         $validated['is_active'] = $request->boolean('is_active');
         $validated['is_featured'] = $request->boolean('is_featured');
         $validated['stock'] = (int) ($validated['stock'] ?? 0);
@@ -118,7 +119,7 @@ class ProductController extends Controller
                     }
                 }
 
-                ActivityLog::log('product.created', 'Product created: ' . $product->name, $product);
+                ActivityLog::log('product.created', 'Product created: '.$product->name, $product);
             });
         } catch (\Throwable $e) {
             foreach ($uploadedPaths as $path) {
@@ -151,6 +152,7 @@ class ProductController extends Controller
                 $selectedParentId = $product->category_id;
             }
         }
+
         return view('admin.products.edit', compact('product', 'rootCategories', 'subcategoriesByParentId', 'selectedParentId', 'selectedSubcategoryId'));
     }
 
@@ -158,7 +160,7 @@ class ProductController extends Controller
     {
         $validated = $request->validated();
         unset($validated['main_image'], $validated['gallery_images']);
-        $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
+        $validated['slug'] = $validated['slug'] ?? Product::generateUniqueSlug($validated['name'], $product->id);
         $validated['is_active'] = $request->boolean('is_active');
         $validated['is_featured'] = $request->boolean('is_featured');
         $validated['stock'] = (int) ($validated['stock'] ?? 0);
@@ -195,7 +197,7 @@ class ProductController extends Controller
                     }
                 }
 
-                ActivityLog::log('product.updated', 'Product updated: ' . $product->name, $product);
+                ActivityLog::log('product.updated', 'Product updated: '.$product->name, $product);
             });
         } catch (\Throwable $e) {
             foreach ($uploadedPaths as $path) {
@@ -222,7 +224,8 @@ class ProductController extends Controller
             report($e);
         }
         $product->delete();
-        ActivityLog::log('product.deleted', 'Product deleted: ' . $name);
+        ActivityLog::log('product.deleted', 'Product deleted: '.$name);
+
         return redirect()->route('admin.products.index')->with('success', 'Product deleted.');
     }
 
@@ -235,9 +238,11 @@ class ProductController extends Controller
             Storage::disk('public')->delete($image->path);
         } catch (\Throwable $e) {
             report($e);
+
             return response()->json(['success' => false, 'message' => 'Failed to delete file from storage.'], 500);
         }
         $image->delete();
+
         return response()->json(['success' => true, 'message' => 'Gallery image deleted.']);
     }
 
@@ -251,15 +256,18 @@ class ProductController extends Controller
             Storage::disk('public')->delete($path);
         } catch (\Throwable $e) {
             report($e);
+
             return response()->json(['success' => false, 'message' => 'Failed to delete file from storage.'], 500);
         }
         $product->update(['main_image_path' => null]);
+
         return response()->json(['success' => true, 'message' => 'Main photo removed.']);
     }
 
     private function uniqueFilename(\Illuminate\Http\UploadedFile $file): string
     {
         $ext = $file->getClientOriginalExtension() ?: $file->guessExtension();
-        return Str::uuid()->toString() . '_' . time() . '.' . strtolower($ext);
+
+        return Str::uuid()->toString().'_'.time().'.'.strtolower($ext);
     }
 }

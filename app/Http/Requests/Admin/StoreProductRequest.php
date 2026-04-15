@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Str;
 
 class StoreProductRequest extends FormRequest
 {
@@ -18,7 +18,7 @@ class StoreProductRequest extends FormRequest
             $this->merge(['category_id' => null]);
         }
         if (! $this->filled('slug') && $this->filled('name')) {
-            $this->merge(['slug' => Str::slug($this->input('name'))]);
+            $this->merge(['slug' => Product::generateUniqueSlug($this->input('name'))]);
         }
     }
 
