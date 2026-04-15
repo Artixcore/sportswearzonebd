@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 class UpdateProductRequest extends FormRequest
 {
@@ -16,14 +17,18 @@ class UpdateProductRequest extends FormRequest
         if ($this->has('category_id') && $this->category_id === '') {
             $this->merge(['category_id' => null]);
         }
+        if (! $this->filled('slug') && $this->filled('name')) {
+            $this->merge(['slug' => Str::slug($this->input('name'))]);
+        }
     }
 
     public function rules(): array
     {
         $product = $this->route('product');
+
         return [
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products,slug,' . $product->id,
+            'slug' => 'nullable|string|max:255|unique:products,slug,'.$product->id,
             'category_id' => 'nullable|exists:categories,id',
             'description' => 'nullable|string',
             'short_description' => 'nullable|string|max:500',
@@ -60,7 +65,7 @@ class UpdateProductRequest extends FormRequest
             if ($total > 4) {
                 $validator->errors()->add(
                     'gallery_images',
-                    'Total gallery images cannot exceed 4. You have ' . $existingCount . ' existing and are adding ' . $newFiles . '.'
+                    'Total gallery images cannot exceed 4. You have '.$existingCount.' existing and are adding '.$newFiles.'.'
                 );
             }
         });

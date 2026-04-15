@@ -140,17 +140,19 @@
             </footer>
         </div>
     </div>
-    @if(session('success') || session('error'))
+    @if(session('success') || session('error') || $errors->any())
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        if (typeof showAlert === 'function') {
-            @if(session('success'))
-            showAlert('success', 'Success', {{ json_encode(session('success')) }});
-            @endif
-            @if(session('error'))
-            showAlert('error', 'Error', {{ json_encode(session('error')) }});
-            @endif
+        if (typeof showAlert !== 'function') {
+            return;
         }
+        @if(session('success'))
+        showAlert('success', 'Success', {{ json_encode(session('success')) }});
+        @elseif(session('error'))
+        showAlert('error', 'Error', {{ json_encode(session('error')) }});
+        @elseif($errors->any())
+        showAlert('error', 'Please check the form', {{ json_encode($errors->count() === 1 ? $errors->first() : implode("\n", $errors->all())) }});
+        @endif
     });
     </script>
     @endif
